@@ -1,21 +1,36 @@
 import itertools
 import pathlib
-
+import pymongo
 from typing import Optional
-
 import discord
 import discord.ext
 import discord.abc
 from callofduty import Title, Mode
 from discord.ext.commands import Context
-
+from discord.ext import commands
 import callofduty
-
+from discord.utils import get
 from call_of_duty_handler import get_cod_client
+from player import Player
 
+intents = discord.Intents.default()
+intents.members = True
+client = commands.Bot(command_prefix='!', intents=intents)
+
+myMongo = pymongo.MongoClient('mongodb://localhost:1111/')
+discordlab = myMongo["discord-data"]
+players = discordlab["players"]
 
 ERROR_THUMBNAIL_URL = 'https://i.ibb.co/QJVMZwD/Whats-App-Image-2020-11-16-at-13-24-22.jpg'
 SIGNUP_CHANNEL_NAME = 'bot-signup'
+GILD_MEMBER_ROLE = "Artemis Member"
+
+platform_matcher = {
+            'Activision': Platform.Activision,
+            'Xbox': Platform.Xbox,
+            'BattleNet': Platform.BattleNet,
+            'PlayStation': Platform.PlayStation,
+        }
 
 def initialize_bot() -> discord.ext.commands.Bot:
     intents = discord.Intents.default()
@@ -66,7 +81,7 @@ async def raise_error(member: discord.Member, message: str, channel=Optional[dis
     await message_sender.send(embed=error_message)
 
 
-async def get_player_by_game_id(member: discord.Member, game_id: str) -> Optional[callofduty.Player]:
+async def get_player_stats_by_game_id(member: discord.Member, game_id: str) -> Optional[callofduty.Player]:
     client = get_cod_client()
 
     potential_players = list(itertools.chain.from_iterable(
@@ -93,11 +108,33 @@ async def get_player_by_game_id(member: discord.Member, game_id: str) -> Optiona
         )
         return None
 
-    return potential_players[0]
+    return potential_players[0].profile
 
+def find_player_by_Game_id(Gameid, member: discord.Member):
+    x = {"Game-id": Gameid}
+    person = players.find_one(x)
+    if person == None:
+        return None
+    person = Player(member.guild, member.id, Gameid, platform_matcher[person['Platform']])
+    return person
+
+def find_player_by_discord_id(member: discord.Member):
+    x = {"discordid": member.id}
+    person = players.find_one(x)
+    if person == None:
+        return None
+    person = Player(member.guild, member.id, person['Game-id'], platform_matcher[person['Platform']])
+    return person
+
+def get_role_by_name(ctx: Context, name_of_role: str):
+    role = get(ctx.message.guild.roles, name=f"{name_of_role}")
+    return role
+
+def add_player_to_data_base(data: dict):
+    players.insert_one(data)
 
 @bot_client.command(name='signup')
-async def signup(ctx: Context, *, game_id: str = None):
+async def signup_command(ctx: Context, *, game_id: str = None):
     member = ctx.author
 
     if game_id is None:
@@ -108,21 +145,42 @@ async def signup(ctx: Context, *, game_id: str = None):
             get_channel_by_name(SIGNUP_CHANNEL_NAME)
         )
         return
+        is_he_already_exist = find_player_by_Game_id(game_id, member)
+        if is_he_already_exist is not None:
+            await raise_error(
+                member,
+                f'Another discord member: {is_he_already_exist.discord_name} is already signup with this game id you provide: {game_id}',
+                get_channel_by_name(SIGNUP_CHANNEL_NAME))
+            return
 
-    if game_id is in use:
-
-    if discord member already signed up:
+        is_he_already_exist = find_player_by_discord_id(member)
+        if is_he_already_exist is not None:
+            await raise_error(
+                member,
+                f'You already sign with: {is_he_already_exist.game_id} if you do like to change use "!resignup" command',
+                get_channel_by_name(SIGNUP_CHANNEL_NAME))
+            return
 
 
     wait_message = await ctx.send('**Checking your username, Please wait....**')
-
     await ctx.message.delete()
 
-    cod_user = get_player_by_game_id(member, game_id)
+    cod_user = get_player_stats_by_game_id(member, game_id)
 
     if cod_user is None:
         await wait_message.delete()
+        await raise_error(
+            member,
+            f'Didnt find any player with: {game_id} at call of duty api, that can be ether your profile is still privet or a bug.\nif you are sure you are not privet and is it your correct game id just try again',
+            get_channel_by_name(SIGNUP_CHANNEL_NAME)
+        )
         return
+    else:
+        data = {"discordid": member.id, "discord-name": member.display_name, "name-in-game": name_in_game, "Game-id": game_id, "Platform": paltformsearch, "info": []}
+        add_player_to_data_base(data)
+        role = get_role_by_name(ctx, GILD_MEMBER_ROLE)
+        await member.add_roles(role)
+
 
 
 
