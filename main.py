@@ -1,5 +1,7 @@
 import itertools
 import pathlib
+import time
+import datetime
 import pymongo
 from typing import Optional
 import discord
@@ -12,18 +14,21 @@ import callofduty
 from discord.utils import get
 from call_of_duty_handler import get_cod_client
 from player import Player
+from player_stats import make_player_stats_from_JSON_DATA
+from player_stats import PlayerStats
 
-intents = discord.Intents.default()
-intents.members = True
-client = commands.Bot(command_prefix='!', intents=intents)
 
 myMongo = pymongo.MongoClient('mongodb://localhost:1111/')
 discordlab = myMongo["discord-data"]
 players = discordlab["players"]
 
 ERROR_THUMBNAIL_URL = 'https://i.ibb.co/QJVMZwD/Whats-App-Image-2020-11-16-at-13-24-22.jpg'
+Bot_Embed_Massage_THUMBNAIL_URL = 'https://i.ibb.co/QJVMZwD/Whats-App-Image-2020-11-16-at-13-24-22.jpg'
 SIGNUP_CHANNEL_NAME = 'bot-signup'
+STATS_CHANNEL = "bot-stats"
+LFG_CHANNEL = "bot-lfg"
 GILD_MEMBER_ROLE = "Artemis Member"
+Minutes_to_pull_data_again = 30
 
 platform_matcher = {
             'Activision': Platform.Activision,
@@ -31,6 +36,16 @@ platform_matcher = {
             'BattleNet': Platform.BattleNet,
             'PlayStation': Platform.PlayStation,
         }
+
+def Bot_Embed_Massage(member: discord.Member, title: str, massage: str, channel):
+    message_sender = member if channel is None else channel
+
+    botsign = discord.Embed(title=title, description="", color=0x00ff00)
+    botsign.add_field(name='Dear ' + member.display_name,
+                      value=massage,
+                      inline=False)
+    botsign.set_thumbnail(url=Bot_Embed_Massage_THUMBNAIL_URL)
+    await message_sender.send(embed=botsign)
 
 def initialize_bot() -> discord.ext.commands.Bot:
     intents = discord.Intents.default()
@@ -80,8 +95,22 @@ async def raise_error(member: discord.Member, message: str, channel=Optional[dis
 
     await message_sender.send(embed=error_message)
 
+def check_if_to_pull_again_stats(member: discord.Member):
+    player_member = find_player_by_discord_id(member)
+    time_now = datetime.datetime.now()
+    if player_member is not None:
+        if time_now.day == player_member.last_stats.timestamp.day:
+            if (time_now.hour - player_member.last_stats.timestamp.hour) > 1:
+                return True
+            elif (time_now.minute - player_member.last_stats.timestamp.minute) > Minutes_to_pull_data_again:
+                return True
+            else:
+                return False
+        else:
+            True
 
 async def get_player_stats_by_game_id(member: discord.Member, game_id: str) -> Optional[callofduty.Player]:
+    """This function get member: discord.Member and game_id: str and return PlayerStats: PlayerStats, Platform"""
     client = get_cod_client()
 
     potential_players = list(itertools.chain.from_iterable(
@@ -108,30 +137,98 @@ async def get_player_stats_by_game_id(member: discord.Member, game_id: str) -> O
         )
         return None
 
-    return potential_players[0].profile
+    return make_player_stats_from_JSON_DATA(potential_players[0].profile(Title.ModernWarfare, Mode.Warzone)), potential_players[0].platform
 
 def find_player_by_Game_id(Gameid, member: discord.Member):
     x = {"Game-id": Gameid}
     person = players.find_one(x)
     if person == None:
         return None
-    person = Player(member.guild, member.id, Gameid, platform_matcher[person['Platform']])
-    return person
+    player_member = Player(member.guild, member.id, Gameid, platform_matcher[person['Platform']], person['info'])
+    return player_member
 
 def find_player_by_discord_id(member: discord.Member):
     x = {"discordid": member.id}
     person = players.find_one(x)
     if person == None:
         return None
-    person = Player(member.guild, member.id, person['Game-id'], platform_matcher[person['Platform']])
-    return person
+    player_member = Player(member.guild, member.id, person['Game-id'], platform_matcher[person['Platform']], person['info'])
+    return player_member
+
+ def mention_to_member(ctx: Context, userto: str):
+   """this function get 'ctx' and a mention of Discord.Member ( ->str ) and return Discord.Member type of the member"""
+    userto = userto[3:-1]
+    member = ctx.guild.get_member(int(userto))
+    return member
 
 def get_role_by_name(ctx: Context, name_of_role: str):
+    """this function get ctx: Context and name_of_role: str, return role type"""
     role = get(ctx.message.guild.roles, name=f"{name_of_role}")
     return role
 
-def add_player_to_data_base(data: dict):
+def add_player_to_data_base(member: discord.Member, player_stats: PlayerStats, Platform, Game_id):
+    data = {"discordid": member.id, "discord-name": member.display_name, "name-in-game": "did'nt_provide_yet",
+            "Game-id": Game_id, "Platform": Platform, "info": [player_stats.asdict()]}
     players.insert_one(data)
+
+
+async def give_kd_to_discord_members_roles(ctx: Context, member: discord.Member, player_stats: PlayerStats):
+    """this function get Discord.Member type and 'info'( -> dic) and give rolls in the discord(guild) to the member
+    acoording to his info"""
+    for r in member.roles:
+        if r.name[0:3] == 'Ove' or r.name[0:3] == 'Win' or r.name[0:3] == 'Wee':
+            await member.remove_roles(r)
+    i = 0
+    while (i < 10000):
+        if i <= player_stats.wins < i + 50:
+            wins_title_role = int(i)
+            break
+        i = i + 50
+    if (wins_title_role < 50):
+        role_name = 'Wins| < 50'
+    else:
+        role_name = 'Wins| ' + str(wins_title_role) + '+'
+    role = get_role_by_name(ctx, role_name)
+    if role is None:
+        New_role_as_create = await member.guild.create_role(name=role_name)
+        await member.add_roles(New_role_as_create)
+    else:
+        await member.add_roles(role)
+
+    while (i < 100):
+        if i <= player_stats.kd < i + 0.5:
+            kd_title_role = i
+            break
+        i = i + 0.5
+    if (kd_title_role < 1):
+        role_name = 'Overall KD| < 1'
+    else:
+        role_name = 'Overall KD| ' + str(kd_title_role) + '-' + str(float(kd_title_role) + 0.5)
+    role = get_role_by_name(ctx, role_name)
+    if role is None:
+        New_role_as_create = await member.guild.create_role(name=role_name)
+        await member.add_roles(New_role_as_create)
+    else:
+        await member.add_roles(role)
+
+    while (i < 100):
+        if i <= player_stats.kdweekly < i + 0.5:
+            kd_weekly_title_role = i
+            break
+        i = i + 0.5
+    if (kd_title_role < 1):
+        role_name = 'Weekly KD| < 1'
+    else:
+        role_name = 'Weekly KD| ' + str(kd_weekly_title_role) + '-' + str(float(kd_weekly_title_role) + 0.5)
+    if role is None:
+        New_role_as_create = await member.guild.create_role(name=role_name)
+        await member.add_roles(New_role_as_create)
+    else:
+        await member.add_roles(role)
+
+
+
+
 
 @bot_client.command(name='signup')
 async def signup_command(ctx: Context, *, game_id: str = None):
@@ -165,9 +262,60 @@ async def signup_command(ctx: Context, *, game_id: str = None):
     wait_message = await ctx.send('**Checking your username, Please wait....**')
     await ctx.message.delete()
 
-    cod_user = get_player_stats_by_game_id(member, game_id)
+    member_player_stats, Platform_player = get_player_stats_by_game_id(member, game_id)
 
-    if cod_user is None:
+    if member_player_stats is None:
+        await wait_message.delete()
+        await raise_error(
+            member,
+            f'Didnt find any player with: {game_id} at call of duty api, that can be ether your profile is still privet or a bug.\nif you are sure you are not privet and is it your correct game id just try again',
+            get_channel_by_name(SIGNUP_CHANNEL_NAME)
+        )
+        return
+
+    else:
+        add_player_to_data_base(member, member_player_stats, Platform_player, game_id)
+        role = get_role_by_name(ctx, GILD_MEMBER_ROLE)
+        await member.add_roles(role)
+        await give_kd_to_discord_members_roles(ctx, member, member_player_stats)
+        member_player_stats.stats_massage_form(member,"stats", wait_message)
+        Bot_Embed_Massage(
+            member,
+            'Welcome to Artemis Warzone Discord',
+            'Thank you for Signing up to ArtemisBot! from now on you can use the command !stats in #bot-stats to check your stats and update them.',
+        get_channel_by_name(SIGNUP_CHANNEL_NAME))
+
+
+@bot_client.command(name='resignup')
+async def re_signup_command(ctx: Context, *, game_id: str = None):
+    member = ctx.message.author
+    if game_id is None:
+        await raise_error(member,
+                          'To sign up please type your Activision ID | Battle.Net ID | PSN | Xbox-ID at the end of the command.\n For example: !signup GiantPiG#3577779',
+                          get_channel_by_name(SIGNUP_CHANNEL_NAME))
+        return
+    wait_message = await ctx.send("**Resign up event has been Start!**")
+    message_member_send = ctx.message
+    time.sleep(1)
+    await message_member_send.delete()
+
+    player_member = find_player_by_discord_id(member)
+    if player_member is None:
+        await raise_error(member,
+                          'you are not in the database yet please signup first',
+                          get_channel_by_name(SIGNUP_CHANNEL_NAME))
+        return
+
+    player_member = find_player_by_Game_id(game_id)
+    if player_member is not None:
+        await raise_error(member,
+                          f'i am sorry but {player_member.discord_name} is signup with {game_id} already',
+                          get_channel_by_name(SIGNUP_CHANNEL_NAME))
+        return
+
+
+    player_stats_member, his_paltform = get_player_stats_by_game_id(member, game_id)
+    if player_stats_member is None:
         await wait_message.delete()
         await raise_error(
             member,
@@ -176,14 +324,64 @@ async def signup_command(ctx: Context, *, game_id: str = None):
         )
         return
     else:
-        data = {"discordid": member.id, "discord-name": member.display_name, "name-in-game": name_in_game, "Game-id": game_id, "Platform": paltformsearch, "info": []}
-        add_player_to_data_base(data)
-        role = get_role_by_name(ctx, GILD_MEMBER_ROLE)
-        await member.add_roles(role)
+        player_member.change_game_id_and_platform(game_id, his_paltform)
+        player_stats_member.stats_massage_form(member, "stats", wait_message)
+        Bot_Embed_Massage(
+            member,
+            'Welcome to Artemis Warzone Discord Once again!',
+            'Thank you for Signing up to ArtemisBot! from now on you can use the command !stats in #bot-stats to check your stats and update them.',
+            get_channel_by_name(SIGNUP_CHANNEL_NAME))
 
 
+@bot_client.command(name='stats')
+async def stats_command(ctx: Context, userto: str ='me'):
+    if (userto == 'me'):
+        member = ctx.message.author
+    else:
+        member = mention_to_member(ctx, userto)
+
+    player_member = find_player_by_discord_id(member)
+    if player_member is not None:
+        if check_if_to_pull_again_stats:
+            member_player_stats, Platform_player = get_player_stats_by_game_id(member, player_member.game_id)
+            player_member.add_stats(member_player_stats)
+            player_member.last_stats.stats_massage_form(member, "stats")
+            await give_kd_to_discord_members_roles(ctx, member, player_member.last_stats)
+
+        else:
+            player_member.last_stats.stats_massage_form(member, "stats")
+    else:
+        await raise_error(member,
+                          "you are not in the database yet please signup first",
+                          get_channel_by_name(STATS_CHANNEL))
+
+@bot_client.command(name='דאשאד')
+async def stats_command2(ctx: Context, userto: str ='me'):
+    await stats_command(ctx, userto)
 
 
+@bot_client.command(name='lfg')
+async def lfg_command(ctx: Context):
+    member = ctx.message.author
+    voice_channel = member.voice.channel
+    LFG = get_channel_by_name(LFG_CHANNEL)
+    player_member = find_player_by_discord_id(member)
+    if player_member is not None:
+        if check_if_to_pull_again_stats:
+            member_player_stats, Platform_player = get_player_stats_by_game_id(member, player_member.game_id)
+            player_member.add_stats(member_player_stats)
+        player_member.last_stats.stats_massage_form(member, "lfg")
+        if voice_channel is not None:
+            invite = await voice_channel.create_invite()
+            await LFG.send(invite)
+    else:
+        await raise_error(member,
+                          "you are not in the database yet please signup first",
+                          LFG)
+
+@bot_client.command(name='ךכע')
+async def lfg_command_2(ctx: Context):
+    await lfg_command(ctx)
 
 
 if __name__ == '__main__':
