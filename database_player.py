@@ -7,12 +7,13 @@ import call_of_duty_handler
 import player_stats
 
 
-class Player:
+class DATABase_Player:
 
-    def __init__(self, discord_guild: discord.Guild, discord_id: int, game_id: str, platform: callofduty.Platform, player_stats_list):
+    def __init__(self, discord_guild: discord.Guild, discord_id: int, game_id: str, platform: callofduty.Platform, player_stats_list, name_in_game: str):
         self._discord_guild = discord_guild
         self._discord_id = discord_id
         self._game_id = game_id
+        self._name_in_game = name_in_game
         self._cod_player = None
         self._platform = platform
         self._player_stats: List[player_stats.PlayerStats] = player_stats_list
@@ -41,6 +42,10 @@ class Player:
     def game_id(self) -> str:
         return self._game_id
 
+    @property
+    def name_in_game(self) -> str:
+        return self._name_in_game
+
     def _set_cod_player(self) -> None:
         self._cod_player = await call_of_duty_handler.get_cod_client().GetPlayer(self.platform, self.game_id)
 
@@ -55,15 +60,20 @@ class Player:
     def stats(self) -> Tuple[player_stats.PlayerStats]:
         return tuple(self._player_stats)
 
+    def change_name_in_game(self, name_in_game):
+        self._name_in_game = name_in_game
+        self._change_name_in_game_in_database()
+
 
     def last_stats(self):
         return self._player_stats[-1]
 
     def change_game_id_and_platform(self, game_id: str, platform: callofduty.Platform):
-        self._change_game_id_in_database()
-        self._change_Platform_in_database()
         self._platform = platform
         self._game_id = game_id
+        self._change_game_id_in_database()
+        self._change_Platform_in_database()
+
 
     def add_stats(self, stats: player_stats.PlayerStats) -> None:
         if self.last_stats().timestamp.day == stats.timestamp.day:
@@ -101,4 +111,9 @@ class Player:
     def _change_player_stats_in_database(self):
         myquery = {"discordid": self.discord_id}
         newvalues = {"$set": {"info": self._player_stats}}
+        players.update_one(myquery, newvalues)
+
+    def _change_name_in_game_in_database(self):
+        myquery = {"discordid": self.discord_id}
+        newvalues = {"$set": {"info": self._name_in_game}}
         players.update_one(myquery, newvalues)

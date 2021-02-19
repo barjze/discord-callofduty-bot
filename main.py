@@ -13,7 +13,7 @@ from discord.ext import commands
 import callofduty
 from discord.utils import get
 from call_of_duty_handler import get_cod_client
-from player import Player
+from database_player import DATABase_Player
 from player_stats import make_player_stats_from_JSON_DATA
 from player_stats import PlayerStats
 
@@ -37,7 +37,7 @@ platform_matcher = {
             'PlayStation': Platform.PlayStation,
         }
 
-def Bot_Embed_Massage(member: discord.Member, title: str, massage: str, channel):
+async Bot_Embed_Massage(member: discord.Member, title: str, massage: str, channel):
     message_sender = member if channel is None else channel
 
     botsign = discord.Embed(title=title, description="", color=0x00ff00)
@@ -80,7 +80,7 @@ async def raise_error(member: discord.Member, message: str, channel=Optional[dis
     message_sender = member if channel is None else channel
 
     error_message = discord.Embed(
-        title=f'Dear {member.display_name}',
+        title=f'Dear {member.display_name} this is error message',
         description='',
         color=0xff0000
     )
@@ -144,7 +144,7 @@ def find_player_by_Game_id(Gameid, member: discord.Member):
     person = players.find_one(x)
     if person == None:
         return None
-    player_member = Player(member.guild, member.id, Gameid, platform_matcher[person['Platform']], person['info'])
+    player_member = DATABase_Player(member.guild, member.id, Gameid, platform_matcher[person['Platform']], person['info'], person['name-in-game'])
     return player_member
 
 def find_player_by_discord_id(member: discord.Member):
@@ -152,7 +152,7 @@ def find_player_by_discord_id(member: discord.Member):
     person = players.find_one(x)
     if person == None:
         return None
-    player_member = Player(member.guild, member.id, person['Game-id'], platform_matcher[person['Platform']], person['info'])
+    player_member = DATABase_Player(member.guild, member.id, person['Game-id'], platform_matcher[person['Platform']], person['info'], person['name-in-game'])
     return player_member
 
  def mention_to_member(ctx: Context, userto: str):
@@ -229,6 +229,16 @@ async def give_kd_to_discord_members_roles(ctx: Context, member: discord.Member,
 
 
 
+@bot_client.event
+async def on_ready():
+    print(f'{bot_client.user.name} has connected to Discord!')
+
+@bot_client.event
+async def on_member_join(member):
+    botwelcom = discord.Embed(title='Welcome to Artemis Warzone Discord', description="", color=0x00ff00)
+    botwelcom.add_field(name='Hello '+member.display_name, value="Please sign up to the bot by typing your Activision ID | Battle.Net ID | PSN | Xbox-ID at the end of the command.\n For Example: !signup GiantPiG#3577779", inline=False)
+    botwelcom.set_thumbnail(url='https://i.ibb.co/QJVMZwD/Whats-App-Image-2020-11-16-at-13-24-22.jpg') ####not touch
+    await member.send(embed=botwelcom)
 
 @bot_client.command(name='signup')
 async def signup_command(ctx: Context, *, game_id: str = None):
@@ -279,7 +289,7 @@ async def signup_command(ctx: Context, *, game_id: str = None):
         await member.add_roles(role)
         await give_kd_to_discord_members_roles(ctx, member, member_player_stats)
         member_player_stats.stats_massage_form(member,"stats", wait_message)
-        Bot_Embed_Massage(
+        await Bot_Embed_Massage(
             member,
             'Welcome to Artemis Warzone Discord',
             'Thank you for Signing up to ArtemisBot! from now on you can use the command !stats in #bot-stats to check your stats and update them.',
@@ -326,12 +336,47 @@ async def re_signup_command(ctx: Context, *, game_id: str = None):
     else:
         player_member.change_game_id_and_platform(game_id, his_paltform)
         player_stats_member.stats_massage_form(member, "stats", wait_message)
-        Bot_Embed_Massage(
+        await Bot_Embed_Massage(
             member,
             'Welcome to Artemis Warzone Discord Once again!',
             'Thank you for Signing up to ArtemisBot! from now on you can use the command !stats in #bot-stats to check your stats and update them.',
             get_channel_by_name(SIGNUP_CHANNEL_NAME))
 
+@bot_client.command(name='nickname')
+async def nickname_add_command(ctx: Context, name_in_game: str):
+    member = ctx.author
+    player_member = find_player_by_discord_id(member.id)
+    if player_member is not None:
+        if player_member.name_in_game is "did'nt_provide_yet":
+            player_member.change_name_in_game(name_in_game)
+            await Bot_Embed_Massage(member,
+                                    "You set your nickname"
+                                    "thanks for provide your name in the game now we can look for your stats at matches",
+                                    ctx.channel)
+        else:
+            await Bot_Embed_Massage(member,
+                                    "You already have nickname"
+                                    f"your nickname is: {player_member.name_in_game} to change it use '!change_nickname'",
+                                    ctx.channel)
+    else:
+        await raise_error(member,
+                          "You are not in the database please signup first",
+                          ctx.channel)
+
+@bot_client.command(name='change_nickname')
+async def change_nickname_command(ctx: Context, name_in_game: str):
+    member = ctx.author
+    player_member = find_player_by_discord_id(member.id)
+    if player_member is not None:
+        player_member.change_name_in_game(name_in_game)
+        await Bot_Embed_Massage(member,
+                                "You set your nickname"
+                                "thanks once again for provide your name in the game now we can look for your stats at matches",
+                                ctx.channel)
+    else:
+        await raise_error(member,
+                          "You are not in the database please signup first",
+                          ctx.channel)
 
 @bot_client.command(name='stats')
 async def stats_command(ctx: Context, userto: str ='me'):
