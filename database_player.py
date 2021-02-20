@@ -57,7 +57,7 @@ class DATABase_Player:
     def _set_cod_player(self) -> None:
         while self._cod_player is None:
             try:
-                self._cod_player = await call_of_duty_handler.get_cod_client().GetPlayer(self.platform, self.game_id)
+                self._cod_player = await call_of_duty_handler.CodClient().GetPlayer(self.platform, self.game_id)
             except Exception as e:
                 ErorrChannel = get_channel_by_name(ERROR_CHANNEL)
                 await ErorrChannel.send(f'{e}\nwhile get game history\nuser used: {****USERLOGIN*****}\n password used: {****PASSWORDLOGIN****}\n try to find: {self.game_id}, {self.platform}')
@@ -95,7 +95,7 @@ class DATABase_Player:
         results = None
         while results is None:
             try:
-                results = await call_of_duty_handler.get_cod_client().GetPlayerMatches(platform_matcher[self.platform], self.game_id,
+                results = await call_of_duty_handler.CodClient().GetPlayerMatches(platform_matcher[self.platform], self.game_id,
                                                     Title.ModernWarfare, Mode.Warzone, limit=Number_of_maches)
             except Exception as e:
                 ErorrChannel = get_channel_by_name(ERROR_CHANNEL)

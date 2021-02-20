@@ -12,7 +12,7 @@ from discord.ext.commands import Context
 from discord.ext import commands
 import callofduty
 from discord.utils import get
-from call_of_duty_handler import get_cod_client
+from call_of_duty_handler import CodClient
 from database_player import DATABase_Player
 from player_stats import make_player_stats_from_JSON_DATA
 from player_stats import PlayerStats
@@ -95,7 +95,7 @@ async def raise_error(member: discord.Member, message: str, channel=Optional[dis
 
 async def get_player_stats_by_game_id(member: discord.Member, game_id: str) -> Optional[callofduty.Player]:
     """This function get member: discord.Member and game_id: str and return PlayerStats: PlayerStats, Platform"""
-    client = get_cod_client()
+    client = CodClient()
 
     potential_players = list(itertools.chain.from_iterable(
         client.SearchPlayers(platform, game_id, limit=3)
@@ -140,7 +140,7 @@ def find_player_by_discord_id(member: discord.Member):
     return player_member
 
 def mention_to_member(ctx: Context, userto: str):
-   """this function get 'ctx' and a mention of Discord.Member ( ->str ) and return Discord.Member type of the member"""
+    """this function get 'ctx' and a mention of Discord.Member ( ->str ) and return Discord.Member type of the member"""
     userto = userto[3:-1]
     member = ctx.guild.get_member(int(userto))
     return member
@@ -235,21 +235,22 @@ async def signup_command(ctx: Context, *, game_id: str = None):
             get_channel_by_name(SIGNUP_CHANNEL_NAME)
         )
         return
-        is_he_already_exist = find_player_by_Game_id(game_id, member)
-        if is_he_already_exist is not None:
-            await raise_error(
-                member,
-                f'Another discord member: {is_he_already_exist.discord_name} is already signup with this game id you provide: {game_id}',
-                get_channel_by_name(SIGNUP_CHANNEL_NAME))
-            return
 
-        is_he_already_exist = find_player_by_discord_id(member)
-        if is_he_already_exist is not None:
-            await raise_error(
-                member,
-                f'You already sign with: {is_he_already_exist.game_id} if you do like to change use "!resignup" command',
-                get_channel_by_name(SIGNUP_CHANNEL_NAME))
-            return
+    is_he_already_exist = find_player_by_Game_id(game_id, member)
+    if is_he_already_exist is not None:
+        await raise_error(
+            member,
+            f'Another discord member: {is_he_already_exist.discord_name} is already signup with this game id you provide: {game_id}',
+            get_channel_by_name(SIGNUP_CHANNEL_NAME))
+        return
+
+    is_he_already_exist = find_player_by_discord_id(member)
+    if is_he_already_exist is not None:
+        await raise_error(
+            member,
+            f'You already sign with: {is_he_already_exist.game_id} if you do like to change use "!resignup" command',
+            get_channel_by_name(SIGNUP_CHANNEL_NAME))
+        return
 
 
     wait_message = await ctx.send('**Checking your username, Please wait....**')
@@ -413,7 +414,7 @@ async def last_match_command(ctx: Context, Number_of_maches: int = 5):
     member = ctx.author
     player_member = find_player_by_discord_id(member)
     if player_member is None:
-        raise_error(member,
+        await raise_error(member,
                     "you are not in the database yet please signup first",
                     get_channel_by_name(LAST_MATCH_CHANNEL))
         return

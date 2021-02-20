@@ -1,3 +1,4 @@
+import functools
 import itertools
 from typing import Union, List
 
@@ -6,6 +7,7 @@ import callofduty.http
 import callofduty.utils
 from callofduty import Title, Platform, Mode, Match
 
+from main import get_channel_by_name, ERROR_CHANNEL
 
 CREDENTIAL_LIST = [
     'almog889@gmail.com:An130991',
@@ -76,5 +78,46 @@ def _get_connection_credentials():
         yield credentials.split(':')
 
 
-def get_cod_client():
-    return await DorLogin(*_get_connection_credentials())
+class WithRetry:
+
+    def __init__(self, func, number_of_retries=None):
+        if number_of_retries is None:
+            number_of_retries = len(CREDENTIAL_LIST)
+
+        self._number_of_retries = number_of_retries
+        self._func = func
+
+    def __call__(self, *args, **kwargs):
+        for _ in range(self._number_of_retries):
+            email, password = _get_connection_credentials()
+            try:
+                client = await DorLogin(email, password)
+                return_value = self._func(client, *args, **kwargs)
+            except Exception:
+                ErorrChannel = get_channel_by_name(ERROR_CHANNEL)
+                await ErorrChannel.send(
+                    f'I tried to use user {email}, for method {self._func.__name__} and the request failed!'
+                )
+                continue
+            return return_value
+
+        raise Exception()
+
+
+class CodClient:
+
+    def __init__(self, number_of_retries=None):
+        if number_of_retries is None:
+            number_of_retries = len(CREDENTIAL_LIST)
+
+        self._number_of_retries = number_of_retries
+
+    @property
+    def number_of_retries(self):
+        return self._number_of_retries
+
+    def __getattr__(self, item):
+        return WithRetry(getattr(DorClient, item), number_of_retries=self.number_of_retries)
+
+
+

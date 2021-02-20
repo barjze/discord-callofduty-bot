@@ -65,7 +65,7 @@ def make_player_stats_from_JSON_DATA(profile: dict):
     kd = profile["lifetime"]["mode"]["br"]["properties"]["kdRatio"]
     wins = int(profile["lifetime"]["mode"]["br"]["properties"]["wins"])
     kills = int(profile["lifetime"]["mode"]["br"]["properties"]["kills"])
-    Games_Played = int(profile["lifetime"]["mode"]["br"]["properties"]["gamesPlayed"])
+    games_played = int(profile["lifetime"]["mode"]["br"]["properties"]["gamesPlayed"])
     kills_weekly_br_solo = int(profile["weekly"]["mode"]["br_brsolo"]["properties"]["kills"])
     kills_weekly_br_duo = int(profile["weekly"]["mode"]["br_brduos"]["properties"]["kills"])
     kills_weekly_br_trio = profile["weekly"]["mode"]["br_brtrios"]["properties"]["kills"]
@@ -87,10 +87,18 @@ def make_player_stats_from_JSON_DATA(profile: dict):
 
     kd = round(kd, 2)
     kdweekly = round(kdweekly, 2)
-    winprecent = (wins*100)/Games_Played
+    winprecent = (wins*100)/games_played
     winprecent = round(winprecent, 2)
-    containinfo = {'kd': kd, 'wins': wins, 'kills': kills, 'games_Played': Games_Played, 'kd_weekly': kdweekly, 'win_Percent': winprecent}
-    return PlayerStats(containinfo)
+
+    return PlayerStats(
+        timestamp = datetime.datetime.now(),
+        kd = kd,
+        wins = wins,
+        kills = kills,
+        games_played = games_played,
+        weekly_kd = kdweekly,
+        win_percentage = winprecent,
+    )
 
 def calculate_deltas_kd():
     find_player_by_Game_id()
