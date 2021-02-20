@@ -374,7 +374,6 @@ async def stats_command(ctx: Context, userto: str ='me'):
             player_member.add_stats(member_player_stats)
             player_member.last_stats.stats_massage_form(member, "stats")
             await give_kd_to_discord_members_roles(ctx, member, player_member.last_stats)
-
         else:
             player_member.last_stats.stats_massage_form(member, "stats")
     else:
@@ -424,10 +423,7 @@ async def last_match_command(ctx: Context, Number_of_maches: int = 5):
                           "and then try again",
                           get_channel_by_name(LAST_MATCH_CHANNEL))
         return
-    client = get_cod_client()
-    results = await client.GetPlayerMatches(platform_matcher[player_member.platform], player_member.game_id,
-                                             Title.ModernWarfare, Mode.Warzone, limit=Number_of_maches)
-
+    player_member.last_matches(Number_of_maches)
 
 if __name__ == '__main__':
     bot_client.run(read_token())
