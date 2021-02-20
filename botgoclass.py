@@ -15,6 +15,7 @@ from dotenv import load_dotenv
 from datetime import datetime
 
 
+
 load_dotenv("DISCORD_TOKEN.env")  # nessery
 TOKEN = os.getenv('DISCORD_TOKEN')
 listc2 = []
@@ -1047,7 +1048,7 @@ async def signup(ctx, *, acid=None):
         role = get(ctx.message.guild.roles, name="Artemis Member")
         await member.add_roles(role)
         info = dosefond
-        await stats_massgeform(info, member.display_name)
+        await stats_massgef orm(info, member.display_name)
         await giverole(member, info)
         await discord.Message.delete(masign)
         botsign = discord.Embed(title='Welcome to Artemis Warzone Discord', description="", color=0x00ff00)

@@ -2,12 +2,12 @@ import datetime
 
 import event
 import event_mode
-import player
+import database_player
 
 
 class PastEvent(event.Event):
 
-    def __init__(self, mode: event_mode.EventMode, creator: player.Player, start_time: datetime.datetime, end_time: datetime.datetime):
+    def __init__(self, mode: event_mode.EventMode, creator: database_player.DATABase_Player, start_time: datetime.datetime, end_time: datetime.datetime):
         super().__init__(mode, creator)
 
         self._start_time = start_time

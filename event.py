@@ -1,10 +1,10 @@
 import event_mode
-import player
+import database_player
 
 
 class Event:
 
-    def __init__(self, mode: event_mode.EventMode, creator: player.Player):
+    def __init__(self, mode: event_mode.EventMode, creator: database_player.DATABase_Player):
         self._mode = mode
         self._creator = creator
 
@@ -13,5 +13,5 @@ class Event:
         return self._mode
 
     @property
-    def creator(self) -> player.Player:
+    def creator(self) -> database_player.DATABase_Player:
         return self._creator
