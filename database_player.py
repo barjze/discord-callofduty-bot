@@ -1,12 +1,14 @@
 from typing import Tuple, List
-from main import players,platform_matcher,ERROR_CHANNEL,get_channel_by_name
+from main import players,platform_matcher,ERROR_CHANNEL,get_channel_by_name,Minutes_to_pull_data_again
 from callofduty import Title, Mode
 from game import make_games_from_JSON_DATA
+from normal_game import NormalGame
 import callofduty
 import discord
 import call_of_duty_handler
 import player_stats
 from discord.ext import commands
+import datetime
 
 
 class DATABase_Player:
@@ -100,8 +102,19 @@ class DATABase_Player:
                 await ErorrChannel.send(f'{e}\nwhile get game history\nuser used: {****USERLOGIN*****}\n password used: {****PASSWORDLOGIN****}\n try to find: {self.game_id}, {self.platform}')
         for i in len(results) - 1:
             game = make_games_from_JSON_DATA(results[i], self)
+            game.normal_game_message_form(i)
 
-
+    def check_if_to_pull_again_stats(self):
+        time_now = datetime.datetime.now()
+        if time_now.day == self.last_stats.timestamp.day:
+            if (time_now.hour - self.last_stats.timestamp.hour) > 1:
+                return True
+            elif (time_now.minute - self.last_stats.timestamp.minute) > Minutes_to_pull_data_again:
+                return True
+            else:
+                return False
+        else:
+            True
 
     def add_stats(self, stats: player_stats.PlayerStats) -> None:
         if self.last_stats().timestamp.day == stats.timestamp.day:

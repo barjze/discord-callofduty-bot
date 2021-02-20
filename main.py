@@ -93,20 +93,6 @@ async def raise_error(member: discord.Member, message: str, channel=Optional[dis
 
     await message_sender.send(embed=error_message)
 
-def check_if_to_pull_again_stats(member: discord.Member):
-    player_member = find_player_by_discord_id(member)
-    time_now = datetime.datetime.now()
-    if player_member is not None:
-        if time_now.day == player_member.last_stats.timestamp.day:
-            if (time_now.hour - player_member.last_stats.timestamp.hour) > 1:
-                return True
-            elif (time_now.minute - player_member.last_stats.timestamp.minute) > Minutes_to_pull_data_again:
-                return True
-            else:
-                return False
-        else:
-            True
-
 async def get_player_stats_by_game_id(member: discord.Member, game_id: str) -> Optional[callofduty.Player]:
     """This function get member: discord.Member and game_id: str and return PlayerStats: PlayerStats, Platform"""
     client = get_cod_client()
@@ -383,7 +369,7 @@ async def stats_command(ctx: Context, userto: str ='me'):
 
     player_member = find_player_by_discord_id(member)
     if player_member is not None:
-        if check_if_to_pull_again_stats:
+        if player_member.check_if_to_pull_again_stats:
             member_player_stats = player_member.cod_player
             player_member.add_stats(member_player_stats)
             player_member.last_stats.stats_massage_form(member, "stats")
@@ -407,7 +393,7 @@ async def lfg_command(ctx: Context):
     LFG = get_channel_by_name(LFG_CHANNEL)
     player_member = find_player_by_discord_id(member)
     if player_member is not None:
-        if check_if_to_pull_again_stats:
+        if player_member.check_if_to_pull_again_stats:
             member_player_stats, Platform_player = get_player_stats_by_game_id(member, player_member.game_id, player_member)
             player_member.add_stats(member_player_stats)
         player_member.last_stats.stats_massage_form(member, "lfg")
