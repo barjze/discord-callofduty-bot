@@ -128,7 +128,12 @@ def find_player_by_Game_id(Gameid, member: discord.Member):
     person = players.find_one(x)
     if person == None:
         return None
-    player_member = DATABase_Player(member.guild, member.id, Gameid, platform_matcher[person['Platform']], person['info'], person['name-in-game'])
+    player_member = DATABase_Player(discord_guild=member.guild,
+                                    discord_id=member.id,
+                                    game_id=person['Game-id'],
+                                    platform=platform_matcher[person['Platform']],
+                                    player_stats_list=person['info'],
+                                    name_in_game=person['name-in-game'])
     return player_member
 
 def find_player_by_discord_id(member: discord.Member):
@@ -136,7 +141,12 @@ def find_player_by_discord_id(member: discord.Member):
     person = players.find_one(x)
     if person == None:
         return None
-    player_member = DATABase_Player(member.guild, member.id, person['Game-id'], platform_matcher[person['Platform']], person['info'], person['name-in-game'])
+    player_member = DATABase_Player(discord_guild=member.guild,
+                                    discord_id=member.id,
+                                    game_id=person['Game-id'],
+                                    platform=platform_matcher[person['Platform']],
+                                    player_stats_list=person['info'],
+                                    name_in_game=person['name-in-game'])
     return player_member
 
 def mention_to_member(ctx: Context, userto: str):
@@ -145,8 +155,11 @@ def mention_to_member(ctx: Context, userto: str):
     member = ctx.guild.get_member(int(userto))
     return member
 
-def get_role_by_name(ctx: Context, name_of_role: str):
+def get_role_by_name(ctx: Context, name_of_role: str, guild: discord.Guild = None):
     """this function get ctx: Context and name_of_role: str, return role type"""
+    if guild is not None:
+        role = get(guild.roles, name=f"{name_of_role}")
+        return role
     role = get(ctx.message.guild.roles, name=f"{name_of_role}")
     return role
 
@@ -154,61 +167,14 @@ def add_player_to_data_base(member: discord.Member, player_stats: PlayerStats, P
     data = {"discordid": member.id, "discord-name": member.display_name, "name-in-game": "did'nt_provide_yet",
             "Game-id": Game_id, "Platform": Platform, "info": [player_stats.asdict()]}
     players.insert_one(data)
-
-async def give_kd_to_discord_members_roles(ctx: Context, member: discord.Member, player_stats: PlayerStats):
-    """this function get Discord.Member type and 'info'( -> dic) and give rolls in the discord(guild) to the member
-    acoording to his info"""
-    for r in member.roles:
-        if r.name[0:3] == 'Ove' or r.name[0:3] == 'Win' or r.name[0:3] == 'Wee':
-            await member.remove_roles(r)
-    i = 0
-    while (i < 10000):
-        if i <= player_stats.wins < i + 50:
-            wins_title_role = int(i)
-            break
-        i = i + 50
-    if (wins_title_role < 50):
-        role_name = 'Wins| < 50'
-    else:
-        role_name = 'Wins| ' + str(wins_title_role) + '+'
-    role = get_role_by_name(ctx, role_name)
-    if role is None:
-        New_role_as_create = await member.guild.create_role(name=role_name)
-        await member.add_roles(New_role_as_create)
-    else:
-        await member.add_roles(role)
-
-    while (i < 100):
-        if i <= player_stats.kd < i + 0.5:
-            kd_title_role = i
-            break
-        i = i + 0.5
-    if (kd_title_role < 1):
-        role_name = 'Overall KD| < 1'
-    else:
-        role_name = 'Overall KD| ' + str(kd_title_role) + '-' + str(float(kd_title_role) + 0.5)
-    role = get_role_by_name(ctx, role_name)
-    if role is None:
-        New_role_as_create = await member.guild.create_role(name=role_name)
-        await member.add_roles(New_role_as_create)
-    else:
-        await member.add_roles(role)
-
-    while (i < 100):
-        if i <= player_stats.kdweekly < i + 0.5:
-            kd_weekly_title_role = i
-            break
-        i = i + 0.5
-    if (kd_title_role < 1):
-        role_name = 'Weekly KD| < 1'
-    else:
-        role_name = 'Weekly KD| ' + str(kd_weekly_title_role) + '-' + str(float(kd_weekly_title_role) + 0.5)
-    if role is None:
-        New_role_as_create = await member.guild.create_role(name=role_name)
-        await member.add_roles(New_role_as_create)
-    else:
-        await member.add_roles(role)
-
+    return DATABase_Player(
+        discord_guild=member.guild,
+        discord_id=member.id,
+        game_id=Game_id,
+        name_in_game="did'nt_provide_yet",
+        platform=Platform,
+        player_stats_list=[player_stats]
+        )
 
 
 
@@ -268,10 +234,10 @@ async def signup_command(ctx: Context, *, game_id: str = None):
         return
 
     else:
-        add_player_to_data_base(member, member_player_stats, Platform_player, game_id)
+        DATABase_Player = add_player_to_data_base(member, member_player_stats, Platform_player, game_id)
         role = get_role_by_name(ctx, GILD_MEMBER_ROLE)
         await member.add_roles(role)
-        await give_kd_to_discord_members_roles(ctx, member, member_player_stats)
+        DATABase_Player.give_KD_roles()
         member_player_stats.stats_massage_form(member,"stats", wait_message)
         await Bot_Embed_Massage(
             member,
@@ -374,7 +340,7 @@ async def stats_command(ctx: Context, userto: str ='me'):
             member_player_stats = player_member.cod_player
             player_member.add_stats(member_player_stats)
             player_member.last_stats.stats_massage_form(member, "stats")
-            await give_kd_to_discord_members_roles(ctx, member, player_member.last_stats)
+            player_member.give_KD_roles()
         else:
             player_member.last_stats.stats_massage_form(member, "stats")
     else:

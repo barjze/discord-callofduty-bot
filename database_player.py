@@ -1,5 +1,5 @@
 from typing import Tuple, List
-from main import players,platform_matcher,ERROR_CHANNEL,get_channel_by_name,Minutes_to_pull_data_again
+from main import players,platform_matcher,ERROR_CHANNEL,get_channel_by_name,Minutes_to_pull_data_again,get_role_by_name
 from callofduty import Title, Mode
 from game import make_games_from_JSON_DATA
 from normal_game import NormalGame
@@ -55,12 +55,8 @@ class DATABase_Player:
         return self._cod_player
 
     def _set_cod_player(self) -> None:
-        while self._cod_player is None:
-            try:
-                self._cod_player = await call_of_duty_handler.CodClient().GetPlayer(self.platform, self.game_id)
-            except Exception as e:
-                ErorrChannel = get_channel_by_name(ERROR_CHANNEL)
-                await ErorrChannel.send(f'{e}\nwhile get game history\nuser used: {****USERLOGIN*****}\n password used: {****PASSWORDLOGIN****}\n try to find: {self.game_id}, {self.platform}')
+        if self._cod_player is None:
+            self._cod_player = await call_of_duty_handler.CodClient().GetPlayer(self.platform, self.game_id)
 
     @property
     def discord_member(self):
@@ -73,6 +69,63 @@ class DATABase_Player:
         guild = await discord.ext.commands.Bot.fetch_guild(self.discord_guild)
         self._discord_member = guild.get_member(self.discord_id)
 
+    def give_KD_roles(self):
+        for r in self.discord_member.roles:
+            if r.name[0:3] == 'Ove' or r.name[0:3] == 'Win' or r.name[0:3] == 'Wee':
+                await self.discord_member.remove_roles(r)
+
+        i = 0
+        while (i < 10000):
+            if i <= self.last_stats().wins < i + 50:
+                wins_title_role = int(i)
+                break
+            i = i + 50
+        if (wins_title_role < 50):
+            role_name = 'Wins| < 50'
+        else:
+            role_name = 'Wins| ' + str(wins_title_role) + '+'
+        role = get_role_by_name(guild=self.discord_guild, name_of_role=role_name)
+        if role is None:
+            New_role_as_create = await self.guild.create_role(name=role_name)
+            await self.discord_member.add_roles(New_role_as_create)
+        else:
+            await self.discord_member.add_roles(role)
+
+        i = 0
+        while (i < 100):
+            if i <= self.last_stats().kd < i + 0.5:
+                kd_title_role = i
+                break
+            i = i + 0.5
+        if (kd_title_role < 1):
+            role_name = 'Overall KD| < 1'
+        else:
+            role_name = 'Overall KD| ' + str(kd_title_role) + '-' + str(float(kd_title_role) + 0.5)
+
+        role = get_role_by_name(guild=self.discord_guild, name_of_role=role_name)
+        if role is None:
+            New_role_as_create = await self.discord_member.guild.create_role(name=role_name)
+            await self.discord_member.add_roles(New_role_as_create)
+        else:
+            await self.discord_member.add_roles(role)
+
+        i = 0
+        while (i < 100):
+            if i <= self.last_stats().kdweekly < i + 0.5:
+                kd_weekly_title_role = i
+                break
+            i = i + 0.5
+        if (kd_title_role < 1):
+            role_name = 'Weekly KD| < 1'
+        else:
+            role_name = 'Weekly KD| ' + str(kd_weekly_title_role) + '-' + str(float(kd_weekly_title_role) + 0.5)
+
+        role = get_role_by_name(guild=self.discord_guild, name_of_role=role_name)
+        if role is None:
+            New_role_as_create = await self.guild.create_role(name=role_name)
+            await self.discord_member.add_roles(New_role_as_create)
+        else:
+            await self.discord_member.add_roles(role)
 
     @property
     def stats(self) -> Tuple[player_stats.PlayerStats]:
@@ -92,14 +145,7 @@ class DATABase_Player:
         self._change_Platform_in_database()
 
     def last_matches(self, Number_of_maches):
-        results = None
-        while results is None:
-            try:
-                results = await call_of_duty_handler.CodClient().GetPlayerMatches(platform_matcher[self.platform], self.game_id,
-                                                    Title.ModernWarfare, Mode.Warzone, limit=Number_of_maches)
-            except Exception as e:
-                ErorrChannel = get_channel_by_name(ERROR_CHANNEL)
-                await ErorrChannel.send(f'{e}\nwhile get game history\nuser used: {****USERLOGIN*****}\n password used: {****PASSWORDLOGIN****}\n try to find: {self.game_id}, {self.platform}')
+        results = await call_of_duty_handler.CodClient().GetPlayerMatches(platform_matcher[self.platform], self.game_id,Title.ModernWarfare, Mode.Warzone, limit=Number_of_maches)
         for i in len(results) - 1:
             game = make_games_from_JSON_DATA(results[i], self)
             game.normal_game_message_form(i)
