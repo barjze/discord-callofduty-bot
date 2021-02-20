@@ -27,6 +27,8 @@ Bot_Embed_Massage_THUMBNAIL_URL = 'https://i.ibb.co/QJVMZwD/Whats-App-Image-2020
 SIGNUP_CHANNEL_NAME = 'bot-signup'
 STATS_CHANNEL = "bot-stats"
 LFG_CHANNEL = "bot-lfg"
+LAST_MATCH_CHANNEL = "bot-last-matches"
+ERROR_CHANNEL = "error-bot"
 GILD_MEMBER_ROLE = "Artemis Member"
 Minutes_to_pull_data_again = 30
 
@@ -37,9 +39,8 @@ platform_matcher = {
             'PlayStation': Platform.PlayStation,
         }
 
-async Bot_Embed_Massage(member: discord.Member, title: str, massage: str, channel):
+async def Bot_Embed_Massage(member: discord.Member, title: str, massage: str, channel):
     message_sender = member if channel is None else channel
-
     botsign = discord.Embed(title=title, description="", color=0x00ff00)
     botsign.add_field(name='Dear ' + member.display_name,
                       value=massage,
@@ -53,10 +54,8 @@ def initialize_bot() -> discord.ext.commands.Bot:
 
     return discord.ext.commands.Bot(command_prefix='!', intents=intents)
 
-
 def read_token(path: pathlib.Path = pathlib.Path('DISCORD_TOKEN')) -> str:
     return path.read_text()
-
 
 bot_client = initialize_bot()
 
@@ -73,7 +72,6 @@ def get_channel_by_name(channel_name: str) -> discord.abc.GuildChannel:
         raise ValueError('No such channel!')
 
     return relevant_channels[0]
-
 
 async def raise_error(member: discord.Member, message: str, channel=Optional[discord.TextChannel]):
 
@@ -155,7 +153,7 @@ def find_player_by_discord_id(member: discord.Member):
     player_member = DATABase_Player(member.guild, member.id, person['Game-id'], platform_matcher[person['Platform']], person['info'], person['name-in-game'])
     return player_member
 
- def mention_to_member(ctx: Context, userto: str):
+def mention_to_member(ctx: Context, userto: str):
    """this function get 'ctx' and a mention of Discord.Member ( ->str ) and return Discord.Member type of the member"""
     userto = userto[3:-1]
     member = ctx.guild.get_member(int(userto))
@@ -170,7 +168,6 @@ def add_player_to_data_base(member: discord.Member, player_stats: PlayerStats, P
     data = {"discordid": member.id, "discord-name": member.display_name, "name-in-game": "did'nt_provide_yet",
             "Game-id": Game_id, "Platform": Platform, "info": [player_stats.asdict()]}
     players.insert_one(data)
-
 
 async def give_kd_to_discord_members_roles(ctx: Context, member: discord.Member, player_stats: PlayerStats):
     """this function get Discord.Member type and 'info'( -> dic) and give rolls in the discord(guild) to the member
@@ -295,7 +292,6 @@ async def signup_command(ctx: Context, *, game_id: str = None):
             'Thank you for Signing up to ArtemisBot! from now on you can use the command !stats in #bot-stats to check your stats and update them.',
         get_channel_by_name(SIGNUP_CHANNEL_NAME))
 
-
 @bot_client.command(name='resignup')
 async def re_signup_command(ctx: Context, *, game_id: str = None):
     member = ctx.message.author
@@ -388,7 +384,7 @@ async def stats_command(ctx: Context, userto: str ='me'):
     player_member = find_player_by_discord_id(member)
     if player_member is not None:
         if check_if_to_pull_again_stats:
-            member_player_stats, Platform_player = get_player_stats_by_game_id(member, player_member.game_id)
+            member_player_stats = player_member.cod_player
             player_member.add_stats(member_player_stats)
             player_member.last_stats.stats_massage_form(member, "stats")
             await give_kd_to_discord_members_roles(ctx, member, player_member.last_stats)
@@ -404,7 +400,6 @@ async def stats_command(ctx: Context, userto: str ='me'):
 async def stats_command2(ctx: Context, userto: str ='me'):
     await stats_command(ctx, userto)
 
-
 @bot_client.command(name='lfg')
 async def lfg_command(ctx: Context):
     member = ctx.message.author
@@ -413,7 +408,7 @@ async def lfg_command(ctx: Context):
     player_member = find_player_by_discord_id(member)
     if player_member is not None:
         if check_if_to_pull_again_stats:
-            member_player_stats, Platform_player = get_player_stats_by_game_id(member, player_member.game_id)
+            member_player_stats, Platform_player = get_player_stats_by_game_id(member, player_member.game_id, player_member)
             player_member.add_stats(member_player_stats)
         player_member.last_stats.stats_massage_form(member, "lfg")
         if voice_channel is not None:
@@ -427,6 +422,25 @@ async def lfg_command(ctx: Context):
 @bot_client.command(name='ךכע')
 async def lfg_command_2(ctx: Context):
     await lfg_command(ctx)
+
+@bot_client.command(name='lastmatch')
+async def last_match_command(ctx: Context, Number_of_maches: int = 5):
+    member = ctx.author
+    player_member = find_player_by_discord_id(member)
+    if player_member is None:
+        raise_error(member,
+                    "you are not in the database yet please signup first",
+                    get_channel_by_name(LAST_MATCH_CHANNEL))
+        return
+    if player_member.name_in_game is "did'nt_provide_yet":
+        await raise_error(member,
+                          "We need your nickname in the game for be able to do that please use '!nickname' first"
+                          "and then try again",
+                          get_channel_by_name(LAST_MATCH_CHANNEL))
+        return
+    client = get_cod_client()
+    results = await client.GetPlayerMatches(platform_matcher[player_member.platform], player_member.game_id,
+                                             Title.ModernWarfare, Mode.Warzone, limit=Number_of_maches)
 
 
 if __name__ == '__main__':

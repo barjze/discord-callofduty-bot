@@ -1,10 +1,12 @@
 from typing import Tuple, List
-from main import players
+from main import players,platform_matcher,ERROR_CHANNEL,get_channel_by_name
+from callofduty import Title, Mode
+from game import make_games_from_JSON_DATA
 import callofduty
 import discord
-
 import call_of_duty_handler
 import player_stats
+from discord.ext import commands
 
 
 class DATABase_Player:
@@ -15,6 +17,7 @@ class DATABase_Player:
         self._game_id = game_id
         self._name_in_game = name_in_game
         self._cod_player = None
+        self._discord_member = None
         self._platform = platform
         self._player_stats: List[player_stats.PlayerStats] = player_stats_list
 
@@ -25,10 +28,6 @@ class DATABase_Player:
     @property
     def discord_id(self) -> int:
         return self._discord_id
-
-    @property
-    def discord_member(self) -> discord.Member:
-        return self.discord_guild.get_member(self.discord_id)
 
     @property
     def platform(self) -> callofduty.Platform:
@@ -46,9 +45,6 @@ class DATABase_Player:
     def name_in_game(self) -> str:
         return self._name_in_game
 
-    def _set_cod_player(self) -> None:
-        self._cod_player = await call_of_duty_handler.get_cod_client().GetPlayer(self.platform, self.game_id)
-
     @property
     def cod_player(self) -> callofduty.Player:
         if self._cod_player is None:
@@ -56,23 +52,55 @@ class DATABase_Player:
 
         return self._cod_player
 
+    def _set_cod_player(self) -> None:
+        while self._cod_player is None:
+            try:
+                self._cod_player = await call_of_duty_handler.get_cod_client().GetPlayer(self.platform, self.game_id)
+            except Exception as e:
+                ErorrChannel = get_channel_by_name(ERROR_CHANNEL)
+                await ErorrChannel.send(f'{e}\nwhile get game history\nuser used: {****USERLOGIN*****}\n password used: {****PASSWORDLOGIN****}\n try to find: {self.game_id}, {self.platform}')
+
+    @property
+    def discord_member(self):
+        if self._discord_member is None:
+            self._set_discord_member()
+
+        return self._discord_member
+
+    def _set_discord_member(self):
+        guild = await discord.ext.commands.Bot.fetch_guild(self.discord_guild)
+        self._discord_member = guild.get_member(self.discord_id)
+
+
     @property
     def stats(self) -> Tuple[player_stats.PlayerStats]:
         return tuple(self._player_stats)
 
+    def last_stats(self):
+        return self._player_stats[-1]
+
     def change_name_in_game(self, name_in_game):
         self._name_in_game = name_in_game
         self._change_name_in_game_in_database()
-
-
-    def last_stats(self):
-        return self._player_stats[-1]
 
     def change_game_id_and_platform(self, game_id: str, platform: callofduty.Platform):
         self._platform = platform
         self._game_id = game_id
         self._change_game_id_in_database()
         self._change_Platform_in_database()
+
+    def last_matches(self, Number_of_maches):
+        results = None
+        while results is None:
+            try:
+                results = await call_of_duty_handler.get_cod_client().GetPlayerMatches(platform_matcher[self.platform], self.game_id,
+                                                    Title.ModernWarfare, Mode.Warzone, limit=Number_of_maches)
+            except Exception as e:
+                ErorrChannel = get_channel_by_name(ERROR_CHANNEL)
+                await ErorrChannel.send(f'{e}\nwhile get game history\nuser used: {****USERLOGIN*****}\n password used: {****PASSWORDLOGIN****}\n try to find: {self.game_id}, {self.platform}')
+        for i in len(results) - 1:
+            game = make_games_from_JSON_DATA(results[i], self)
+
 
 
     def add_stats(self, stats: player_stats.PlayerStats) -> None:
