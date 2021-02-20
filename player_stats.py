@@ -22,7 +22,7 @@ class PlayerStats:
     delta_weekly_kd: float = 0.0
     delta_last_weekly_kd: float = 0.0
 
-    def _set_deltas_kds(self, delta_kd, delta_weekly_kd, delta_last_kd, delta_last_weekly_kd):
+    def set_deltas_kds(self, delta_kd, delta_weekly_kd, delta_last_kd, delta_last_weekly_kd):
         self.delta_kd = delta_kd
         self.delta_last_kd = delta_last_kd
         self.delta_weekly_kd = delta_weekly_kd
@@ -91,13 +91,13 @@ def make_player_stats_from_JSON_DATA(profile: dict):
     winprecent = round(winprecent, 2)
 
     return PlayerStats(
-        timestamp = datetime.datetime.now(),
-        kd = kd,
-        wins = wins,
-        kills = kills,
-        games_played = games_played,
-        weekly_kd = kdweekly,
-        win_percentage = winprecent,
+        timestamp=datetime.datetime.now(),
+        kd=kd,
+        wins=wins,
+        kills=kills,
+        games_played=games_played,
+        weekly_kd=kdweekly,
+        win_percentage=winprecent,
     )
 
 def calculate_deltas_kd():

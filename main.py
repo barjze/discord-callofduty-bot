@@ -337,7 +337,7 @@ async def stats_command(ctx: Context, userto: str ='me'):
     player_member = find_player_by_discord_id(member)
     if player_member is not None:
         if player_member.check_if_to_pull_again_stats:
-            member_player_stats = player_member.cod_player
+            member_player_stats = player_member.pull_new_stats()
             player_member.add_stats(member_player_stats)
             player_member.last_stats.stats_massage_form(member, "stats")
             player_member.give_KD_roles()
@@ -360,7 +360,7 @@ async def lfg_command(ctx: Context):
     player_member = find_player_by_discord_id(member)
     if player_member is not None:
         if player_member.check_if_to_pull_again_stats:
-            member_player_stats, Platform_player = get_player_stats_by_game_id(member, player_member.game_id, player_member)
+            member_player_stats = player_member.pull_new_stats()
             player_member.add_stats(member_player_stats)
         player_member.last_stats.stats_massage_form(member, "lfg")
         if voice_channel is not None:

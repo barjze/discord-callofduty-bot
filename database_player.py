@@ -1,12 +1,12 @@
 from typing import Tuple, List
-from main import players,platform_matcher,ERROR_CHANNEL,get_channel_by_name,Minutes_to_pull_data_again,get_role_by_name
+from main import players, platform_matcher, Minutes_to_pull_data_again, get_role_by_name
 from callofduty import Title, Mode
 from game import make_games_from_JSON_DATA
+from player_stats import PlayerStats, make_player_stats_from_JSON_DATA
 from normal_game import NormalGame
 import callofduty
 import discord
 import call_of_duty_handler
-import player_stats
 from discord.ext import commands
 import datetime
 
@@ -128,7 +128,7 @@ class DATABase_Player:
             await self.discord_member.add_roles(role)
 
     @property
-    def stats(self) -> Tuple[player_stats.PlayerStats]:
+    def stats(self) -> Tuple[PlayerStats]:
         return tuple(self._player_stats)
 
     def last_stats(self):
@@ -162,14 +162,18 @@ class DATABase_Player:
         else:
             True
 
-    def add_stats(self, stats: player_stats.PlayerStats) -> None:
+    def pull_new_stats(self):
+        new_stats = self.cod_player.profile(Title.ModernWarfare, Mode.Warzone)
+        return make_player_stats_from_JSON_DATA(new_stats)
+
+    def add_stats(self, stats: PlayerStats) -> None:
         if self.last_stats().timestamp.day == stats.timestamp.day:
-            stats._set_deltas_kds(self._calculate_deltas_kd)
+            stats.set_deltas_kds(self._calculate_deltas_kd)
             self._player_stats[-1] = stats
             self._change_player_stats_in_database()
             return
         if len(self._player_stats) >= 10:
-            stats._set_deltas_kds(self._calculate_deltas_kd)
+            stats.set_deltas_kds(self._calculate_deltas_kd)
             self._player_stats.pop(0)
         self._player_stats.append(stats)
         self._change_player_stats_in_database()
