@@ -62,8 +62,8 @@ class DorClient(callofduty.Client):
             for match
             in matches
         ]
-    async def SearchPlayer(self, platform: Platform, username: str, **kwargs):
-        return await super().SearchPlayer(platform, username, **kwargs)
+    async def SearchPlayers(self, platform: Platform, username: str, **kwargs):
+        return await super().SearchPlayers(platform, username, **kwargs)
 
 
 async def DorLogin(email: str, password: str) -> DorClient:
@@ -88,11 +88,13 @@ class WithRetry:
         self._func = func
 
     async def __call__(self, *args, **kwargs):
+        gen = _get_connection_credentials()
         for _ in range(self._number_of_retries):
-            email, password = next(_get_connection_credentials())
+
+            email, password = next(gen)
             try:
                 client = await DorLogin(email, password)
-                return_value = self._func(client, *args, **kwargs)
+                return_value = await self._func(client, *args, **kwargs)
             except Exception:
                 ErorrChannel = get_channel_by_name(ERROR_CHANNEL)
                 await ErorrChannel.send(

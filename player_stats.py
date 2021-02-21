@@ -61,18 +61,18 @@ class PlayerStats:
 
 def make_player_stats_from_JSON_DATA(profile: dict):
     #Game_id = str(profile["username"])
-    kd = profile["lifetime"]["mode"]["br"]["properties"]["kdRatio"]
-    wins = int(profile["lifetime"]["mode"]["br"]["properties"]["wins"])
-    kills = int(profile["lifetime"]["mode"]["br"]["properties"]["kills"])
-    games_played = int(profile["lifetime"]["mode"]["br"]["properties"]["gamesPlayed"])
-    kills_weekly_br_solo = int(profile["weekly"]["mode"]["br_brsolo"]["properties"]["kills"])
-    kills_weekly_br_duo = int(profile["weekly"]["mode"]["br_brduos"]["properties"]["kills"])
-    kills_weekly_br_trio = profile["weekly"]["mode"]["br_brtrios"]["properties"]["kills"]
-    kills_weekly_br_quad = profile["weekly"]["mode"]["br_brquads"]["properties"]["kills"]
-    deaths_weekly_br_solo = profile["weekly"]["mode"]["br_brsolo"]["properties"]["deaths"]
-    deaths_weekly_br_duo = profile["weekly"]["mode"]["br_brduos"]["properties"]["deaths"]
-    deaths_weekly_br_trio = profile["weekly"]["mode"]["br_brtrios"]["properties"]["deaths"]
-    deaths_weekly_br_quad = profile["weekly"]["mode"]["br_brquads"]["properties"]["deaths"]
+    kd = float(profile["lifetime"]["mode"]["br"]["properties"]["kdRatio"])
+    wins = float(profile["lifetime"]["mode"]["br"]["properties"]["wins"])
+    kills = float(profile["lifetime"]["mode"]["br"]["properties"]["kills"])
+    games_played = float(profile["lifetime"]["mode"]["br"]["properties"]["gamesPlayed"])
+    kills_weekly_br_solo = float(profile["weekly"]["mode"]["br_brsolo"]["properties"]["kills"])
+    kills_weekly_br_duo = float(profile["weekly"]["mode"]["br_brduos"]["properties"]["kills"])
+    kills_weekly_br_trio = float(profile["weekly"]["mode"]["br_brtrios"]["properties"]["kills"])
+    kills_weekly_br_quad = float(profile["weekly"]["mode"]["br_brquads"]["properties"]["kills"])
+    deaths_weekly_br_solo = float(profile["weekly"]["mode"]["br_brsolo"]["properties"]["deaths"])
+    deaths_weekly_br_duo = float(profile["weekly"]["mode"]["br_brduos"]["properties"]["deaths"])
+    deaths_weekly_br_trio = float(profile["weekly"]["mode"]["br_brtrios"]["properties"]["deaths"])
+    deaths_weekly_br_quad = float(profile["weekly"]["mode"]["br_brquads"]["properties"]["deaths"])
     try:
         mona = kills_weekly_br_solo + kills_weekly_br_duo + kills_weekly_br_trio + kills_weekly_br_quad
         mhane = deaths_weekly_br_solo + deaths_weekly_br_duo + deaths_weekly_br_trio + deaths_weekly_br_quad

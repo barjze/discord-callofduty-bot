@@ -54,7 +54,8 @@ class DATABase_Player:
 
     async def _set_cod_player(self) -> None:
         if self._cod_player is None:
-            self._cod_player = await call_of_duty_handler.CodClient().SearchPlayer(self.platform, self.game_id)
+            self._cod_player = await call_of_duty_handler.CodClient().SearchPlayers(self.platform, self.game_id)
+            self._cod_player = self._cod_player[0]
 
     @property
     async def discord_member(self):
