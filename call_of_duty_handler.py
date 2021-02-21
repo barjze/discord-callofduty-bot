@@ -62,6 +62,8 @@ class DorClient(callofduty.Client):
             for match
             in matches
         ]
+    async def GetPlayer(self, platform: Platform, username: str):
+        return await super().GetPlayer(platform, username)
 
 
 async def DorLogin(email: str, password: str) -> DorClient:

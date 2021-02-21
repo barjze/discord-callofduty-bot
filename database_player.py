@@ -9,6 +9,7 @@ import call_of_duty_handler
 from discord.ext import commands
 import datetime
 from game import game_mod_normal
+import time
 
 
 class DATABase_Player:
@@ -170,7 +171,10 @@ class DATABase_Player:
             True
 
     async def pull_new_stats(self):
-        new_stats = await self.cod_player.profile(Title.ModernWarfare, Mode.Warzone)
+        new_stats = await self.cod_player
+        time.sleep(5)
+        print(type(new_stats))
+        new_stats = await new_stats.profile(Title.ModernWarfare, Mode.Warzone)
         return make_player_stats_from_JSON_DATA(new_stats)
 
     def add_stats(self, stats: PlayerStats) -> None:
