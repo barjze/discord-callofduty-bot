@@ -9,8 +9,6 @@ import call_of_duty_handler
 from discord.ext import commands
 import datetime
 from game import game_mod_normal
-import time
-
 
 class DATABase_Player:
 
@@ -52,12 +50,11 @@ class DATABase_Player:
     async def cod_player(self) -> callofduty.Player:
         if self._cod_player is None:
             await self._set_cod_player()
-
         return self._cod_player
 
     async def _set_cod_player(self) -> None:
         if self._cod_player is None:
-            self._cod_player = await call_of_duty_handler.CodClient().GetPlayer(self.platform, self.game_id)
+            self._cod_player = await call_of_duty_handler.CodClient().SearchPlayer(self.platform, self.game_id)
 
     @property
     async def discord_member(self):
@@ -171,10 +168,8 @@ class DATABase_Player:
             True
 
     async def pull_new_stats(self):
-        new_stats = await self.cod_player
-        time.sleep(5)
-        print(type(new_stats))
-        new_stats = await new_stats.profile(Title.ModernWarfare, Mode.Warzone)
+        temp = await self.cod_player
+        new_stats = await temp.profile(Title.ModernWarfare, Mode.Warzone)
         return make_player_stats_from_JSON_DATA(new_stats)
 
     def add_stats(self, stats: PlayerStats) -> None:

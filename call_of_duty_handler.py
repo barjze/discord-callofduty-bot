@@ -62,8 +62,8 @@ class DorClient(callofduty.Client):
             for match
             in matches
         ]
-    async def GetPlayer(self, platform: Platform, username: str):
-        return await super().GetPlayer(platform, username)
+    async def SearchPlayer(self, platform: Platform, username: str, **kwargs):
+        return await super().SearchPlayer(platform, username, **kwargs)
 
 
 async def DorLogin(email: str, password: str) -> DorClient:
@@ -89,7 +89,7 @@ class WithRetry:
 
     async def __call__(self, *args, **kwargs):
         for _ in range(self._number_of_retries):
-            email, password = _get_connection_credentials()
+            email, password = next(_get_connection_credentials())
             try:
                 client = await DorLogin(email, password)
                 return_value = self._func(client, *args, **kwargs)
