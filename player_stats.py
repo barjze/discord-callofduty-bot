@@ -112,8 +112,11 @@ def make_player_stats_from_JSON_DATA(profile: dict):
 
     kd = round(kd, 2)
     kdweekly = round(kdweekly, 2)
-    winprecent = (wins*100)/games_played
-    winprecent = round(winprecent, 2)
+    if games_played == 0:
+        winprecent = 0.0
+    else:
+        winprecent = (wins*100)/games_played
+        winprecent = round(winprecent, 2)
 
     return PlayerStats(
         timestamp=datetime.datetime.now(),

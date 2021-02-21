@@ -128,10 +128,13 @@ class DATABase_Player:
 
     @property
     def stats(self) -> Tuple[PlayerStats]:
-        return tuple(self._player_stats)
+        return self._player_stats
 
     def last_stats(self):
-        return self._player_stats[-1]
+        return self.get_stats_by_index(-1)
+
+    def get_stats_by_index(self, index: int):
+        return make_player_stats_from_JSON_DATA(self._player_stats[index])
 
     def change_name_in_game(self, name_in_game):
         self._name_in_game = name_in_game
@@ -175,26 +178,33 @@ class DATABase_Player:
 
     def add_stats(self, stats: PlayerStats) -> None:
         if self.last_stats().timestamp.day == stats.timestamp.day:
-            stats.set_deltas_kds(self._calculate_deltas_kd)
+            stats.set_deltas_kds(*self._calculate_deltas_kd(stats))
             self._player_stats[-1] = stats
             self._change_player_stats_in_database()
             return
         if len(self._player_stats) >= 10:
-            stats.set_deltas_kds(self._calculate_deltas_kd)
+            stats.set_deltas_kds(*self._calculate_deltas_kd(stats))
             self._player_stats.pop(0)
         self._player_stats.append(stats)
         self._change_player_stats_in_database()
 
-    def _calculate_deltas_kd(self, stats):
-        if self.last_stats().timestamp.day == stats.timestamp.day:
-            delta_kd = stats.kd - self._player_stats[-2].kd
-            delta_weekly_kd = stats.weekly_kd - self._player_stats[-2].weekly_kd
+    def _calculate_deltas_kd(self, stats: PlayerStats):
+        if len(self.stats) > 1:
+            if self.last_stats().timestamp.day == stats.timestamp.day:
+                delta_kd = stats.kd - self.get_stats_by_index(-2).kd
+                delta_weekly_kd = stats.weekly_kd - self.get_stats_by_index(-2).weekly_kd
+            else:
+                delta_kd = stats.kd - self.get_stats_by_index(-3).kd
+                delta_weekly_kd = stats.weekly_kd - self.get_stats_by_index(-3).weekly_kd
+            delta_last_kd = stats.kd - self.get_stats_by_index(-1).kd
+            delta_last_weekly_kd = stats.weekly_kd - self.get_stats_by_index(-1).weekly_kd
         else:
-            delta_kd = stats.kd - self._player_stats[-3].kd
-            delta_weekly_kd = stats.weekly_kd - self._player_stats[-3].weekly_kd
-        delta_last_kd = stats.kd - self._player_stats[-1].kd
-        delta_last_weekly_kd = stats.weekly_kd - self._player_stats[-1].weekly_kd
+            delta_kd = 0
+            delta_weekly_kd = 0
+            delta_last_kd = 0
+            delta_last_weekly_kd = 0
         return delta_kd, delta_weekly_kd, delta_last_kd, delta_last_weekly_kd
+
 
     def _change_game_id_in_database(self):
         myquery = {"discord-id": self.discord_id}
