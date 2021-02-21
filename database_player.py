@@ -193,12 +193,8 @@ class DATABase_Player:
 
     def _calculate_deltas_kd(self, stats: PlayerStats):
         if len(self.stats) > 1:
-            if self.last_stats().timestamp.day == stats.timestamp.day:
-                delta_kd = stats.kd - self.stats[-2].kd
-                delta_weekly_kd = stats.weekly_kd - self.stats[-2].weekly_kd
-            else:
-                delta_kd = stats.kd - self.stats[-3].kd
-                delta_weekly_kd = stats.weekly_kd - self.stats[-3].weekly_kd
+            delta_kd = stats.kd - self.stats[-2].kd
+            delta_weekly_kd = stats.weekly_kd - self.stats[-2].weekly_kd
             delta_last_kd = stats.kd - self.stats[-1].kd
             delta_last_weekly_kd = stats.weekly_kd - self.stats[-1].weekly_kd
         else:
