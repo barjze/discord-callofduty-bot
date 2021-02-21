@@ -1,13 +1,11 @@
 import functools
 import itertools
 from typing import Union, List
-
 import callofduty
 import callofduty.http
 import callofduty.utils
 from callofduty import Title, Platform, Mode, Match
-
-from main import get_channel_by_name, ERROR_CHANNEL
+from avoid_loop_import import get_channel_by_name, ERROR_CHANNEL
 
 CREDENTIAL_LIST = [
     'almog889@gmail.com:An130991',
@@ -87,7 +85,7 @@ class WithRetry:
         self._number_of_retries = number_of_retries
         self._func = func
 
-    def __call__(self, *args, **kwargs):
+    async def __call__(self, *args, **kwargs):
         for _ in range(self._number_of_retries):
             email, password = _get_connection_credentials()
             try:

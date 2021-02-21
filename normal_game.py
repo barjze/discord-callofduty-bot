@@ -1,8 +1,7 @@
-import game
-from main import get_channel_by_name, LAST_MATCH_CHANNEL, Bot_Embed_Massage_THUMBNAIL_URL
+from avoid_loop_import import get_channel_by_name, LAST_MATCH_CHANNEL, Bot_Embed_Massage_THUMBNAIL_URL
 import discord
 
-class NormalGame(game.Game):
+class NormalGame():
     def __init__(self, game_info):
         self._game_id = game_info['game_id']
         self._game_mode = game_info['game_mode']
@@ -45,7 +44,7 @@ class NormalGame(game.Game):
     def team_belong(self) -> str:
         return self._team_belong
 
-    def normal_game_message_form(self, number_game: str = "1"):
+    async def normal_game_message_form(self, number_game: str = "1"):
         Channel = get_channel_by_name(LAST_MATCH_CHANNEL)
         normal_game_message_form = discord.Embed(title="in " + self._belong.discord_member.display_name + "game number: " + number_game, description="", color=0x00ff00)
         for i in self.players:

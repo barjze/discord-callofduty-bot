@@ -1,7 +1,6 @@
 from typing import Tuple, List
-from main import players, platform_matcher, Minutes_to_pull_data_again, get_role_by_name
+from avoid_loop_import import players, platform_matcher, Minutes_to_pull_data_again, get_role_by_name, raise_error, get_channel_by_name, LAST_MATCH_CHANNEL
 from callofduty import Title, Mode
-from game import make_games_from_JSON_DATA
 from player_stats import PlayerStats, make_player_stats_from_JSON_DATA
 from normal_game import NormalGame
 import callofduty
@@ -9,6 +8,7 @@ import discord
 import call_of_duty_handler
 from discord.ext import commands
 import datetime
+from game import game_mod_normal
 
 
 class DATABase_Player:
@@ -48,28 +48,28 @@ class DATABase_Player:
         return self._name_in_game
 
     @property
-    def cod_player(self) -> callofduty.Player:
+    async def cod_player(self) -> callofduty.Player:
         if self._cod_player is None:
-            self._set_cod_player()
+            await self._set_cod_player()
 
         return self._cod_player
 
-    def _set_cod_player(self) -> None:
+    async def _set_cod_player(self) -> None:
         if self._cod_player is None:
             self._cod_player = await call_of_duty_handler.CodClient().GetPlayer(self.platform, self.game_id)
 
     @property
-    def discord_member(self):
+    async def discord_member(self):
         if self._discord_member is None:
-            self._set_discord_member()
+            await self._set_discord_member()
 
         return self._discord_member
 
-    def _set_discord_member(self):
+    async def _set_discord_member(self):
         guild = await discord.ext.commands.Bot.fetch_guild(self.discord_guild)
         self._discord_member = guild.get_member(self.discord_id)
 
-    def give_KD_roles(self):
+    async def give_KD_roles(self):
         for r in self.discord_member.roles:
             if r.name[0:3] == 'Ove' or r.name[0:3] == 'Win' or r.name[0:3] == 'Wee':
                 await self.discord_member.remove_roles(r)
@@ -144,11 +144,18 @@ class DATABase_Player:
         self._change_game_id_in_database()
         self._change_Platform_in_database()
 
-    def last_matches(self, Number_of_maches):
+    async def last_matches(self, Number_of_maches):
         results = await call_of_duty_handler.CodClient().GetPlayerMatches(platform_matcher[self.platform], self.game_id,Title.ModernWarfare, Mode.Warzone, limit=Number_of_maches)
         for i in len(results) - 1:
-            game = make_games_from_JSON_DATA(results[i], self)
-            game.normal_game_message_form(i)
+            game = await make_games_from_JSON_DATA(results[i], self)
+            if game is NormalGame:
+                await game.normal_game_message_form(i)
+            elif game is str:
+                await raise_error(
+                    self.discord_member,
+                    'your game number: '+ str(i) + 'wasnt normal so i skip it',
+                    get_channel_by_name(LAST_MATCH_CHANNEL)
+                )
 
     def check_if_to_pull_again_stats(self):
         time_now = datetime.datetime.now()
@@ -162,8 +169,8 @@ class DATABase_Player:
         else:
             True
 
-    def pull_new_stats(self):
-        new_stats = self.cod_player.profile(Title.ModernWarfare, Mode.Warzone)
+    async def pull_new_stats(self):
+        new_stats = await self.cod_player.profile(Title.ModernWarfare, Mode.Warzone)
         return make_player_stats_from_JSON_DATA(new_stats)
 
     def add_stats(self, stats: PlayerStats) -> None:
@@ -190,21 +197,56 @@ class DATABase_Player:
         return delta_kd, delta_weekly_kd, delta_last_kd, delta_last_weekly_kd
 
     def _change_game_id_in_database(self):
-        myquery = {"discordid": self.discord_id}
+        myquery = {"discord-id": self.discord_id}
         newvalues = {"$set": {"Game-id": self.Game_id}}
         players.update_one(myquery, newvalues)
 
     def _change_Platform_in_database(self):
-        myquery = {"discordid": self.discord_id}
+        myquery = {"discord-id": self.discord_id}
         newvalues = {"$set": {"Platform": self.Platform}}
         players.update_one(myquery, newvalues)
 
     def _change_player_stats_in_database(self):
-        myquery = {"discordid": self.discord_id}
+        myquery = {"discord-id": self.discord_id}
         newvalues = {"$set": {"info": self._player_stats}}
         players.update_one(myquery, newvalues)
 
     def _change_name_in_game_in_database(self):
-        myquery = {"discordid": self.discord_id}
+        myquery = {"discord-id": self.discord_id}
         newvalues = {"$set": {"info": self._name_in_game}}
         players.update_one(myquery, newvalues)
+
+async def make_games_from_JSON_DATA(game, player_member: DATABase_Player):
+    game_info = {}
+    players = {}
+    game_data = await game.details()
+    game_id = game_data["allPlayers"][0]["matchID"]
+    time_game_is_start = game_data["allPlayers"][0]["utcStartSeconds"]
+    time_game_is_end = game_data["allPlayers"][0]["utcEndSeconds"]
+    game_mode = game_data["allPlayers"][0]["mode"]
+    if str(game_mode) in game_mod_normal:
+        for j in game_data["allPlayers"]:
+            if player_member.name_in_game.lower() == j["player"]["username"].lower():
+                team_name = j["player"]["team"]
+                rank = j["playerStats"]["teamPlacement"]
+                break
+        for a in game_data["allPlayers"]:
+            if team_name == a["player"]["team"]:
+                kills = a["playerStats"]["kills"]
+                players[a["player"]["username"]] = {'kills': kills}
+        game_info['players'] = players
+        for s in game_info['players']:
+            killsteam = killsteam + game_info[s]["kills"]
+        game_info['game_id'] = game_id
+        game_info['game_mode'] = game_mode
+        game_info['time_start'] = time_game_is_start
+        game_info['time_end'] = time_game_is_end
+        game_info['Team'] = {'killsTeam': killsteam, 'rankTeam': rank}
+        game_info['belong'] = player_member
+        return NormalGame(game_info)
+    elif str(game_mode) == "br_dmz_plnbld":
+        ame_id = game_data["allPlayers"][0]["matchID"]
+        time_game_is_start = game_data["allPlayers"][0]["utcStartSeconds"]
+        time_game_is_end = game_data["allPlayers"][0]["utcEndSeconds"]
+        game_mode = game_data["allPlayers"][0]["mode"]
+        return game_mode

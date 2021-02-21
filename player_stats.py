@@ -1,8 +1,7 @@
 import dataclasses
 import datetime
 import discord
-from main import get_channel_by_name
-from main import find_player_by_Game_id
+from avoid_loop_import import get_channel_by_name
 
 LFG_CHANNEL = "bot-lfg"
 STATS_CHANNEL = "bot-stats"
@@ -28,7 +27,7 @@ class PlayerStats:
         self.delta_weekly_kd = delta_weekly_kd
         self.delta_last_weekly_kd = delta_last_weekly_kd
 
-    def stats_massage_form(self, member: discord.Member, lfg_stats: str, massage_to_delete=None):
+    async def stats_massage_form(self, member: discord.Member, lfg_stats: str, massage_to_delete=None):
         if lfg_stats == 'lfg':
             Channel = get_channel_by_name(LFG_CHANNEL)
             title = "Looking For Group!"
@@ -99,6 +98,3 @@ def make_player_stats_from_JSON_DATA(profile: dict):
         weekly_kd=kdweekly,
         win_percentage=winprecent,
     )
-
-def calculate_deltas_kd():
-    find_player_by_Game_id()
