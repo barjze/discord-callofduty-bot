@@ -36,7 +36,7 @@ def initialize_bot() -> discord.ext.commands.Bot:
     return discord.ext.commands.Bot(command_prefix='!', intents=intents)
 
 def read_token(path: pathlib.Path = pathlib.Path('DISCORD_TOKEN.env')) -> str:
-    return path.read_text()
+    return p.read_text().split("=")[1]
 
 bot_client = initialize_bot()
 
