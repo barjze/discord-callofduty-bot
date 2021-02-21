@@ -27,6 +27,18 @@ class PlayerStats:
 
     def export_for_db(self):
         return {
+            "kd" : self.kd,
+            "wins" : self.wins,
+            "kills" : self.kills,
+            "gamesPlayed" : self.games_played,
+            "kdweekly" : self.weekly_kd,
+            "winprecent" : self.win_percentage,
+            "delta_kd" : 0.01,
+            "delta_last_kd": self.delta_last_kd,
+            "delta_weekly_kd" : self.delta_weekly_kd,
+            "delta_last_weekly_kd" : self.delta_last_weekly_kd,
+            "time" : self.timestamp
+
 
         }
 

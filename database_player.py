@@ -61,7 +61,6 @@ class DATABase_Player:
             self._cod_player = await call_of_duty_handler.CodClient().SearchPlayers(self.platform, self.game_id)
             self._cod_player = self._cod_player[0]
 
-    @property
     async def discord_member(self):
         if self._discord_member is None:
             await self._set_discord_member()
@@ -69,13 +68,15 @@ class DATABase_Player:
         return self._discord_member
 
     async def _set_discord_member(self):
-        guild = await discord.ext.commands.Bot.fetch_guild(self.discord_guild)
-        self._discord_member = guild.get_member(self.discord_id)
+        self._discord_member = self._discord_guild.get_member(self.discord_id)
+        return self._discord_member
 
     async def give_KD_roles(self):
-        for r in self.discord_member.roles:
+        discord_member = await self.discord_member()
+        roles = discord_member.roles
+        for r in roles:
             if r.name[0:3] == 'Ove' or r.name[0:3] == 'Win' or r.name[0:3] == 'Wee':
-                await self.discord_member.remove_roles(r)
+                await discord_member.remove_roles(r)
 
         i = 0
         while (i < 10000):
@@ -87,12 +88,12 @@ class DATABase_Player:
             role_name = 'Wins| < 50'
         else:
             role_name = 'Wins| ' + str(wins_title_role) + '+'
-        role = get_role_by_name(guild=self.discord_guild, name_of_role=role_name)
+        role = get_role_by_name(ctx=None, guild=self.discord_guild, name_of_role=role_name)
         if role is None:
             New_role_as_create = await self.guild.create_role(name=role_name)
-            await self.discord_member.add_roles(New_role_as_create)
+            await discord_member.add_roles(New_role_as_create)
         else:
-            await self.discord_member.add_roles(role)
+            await discord_member.add_roles(role)
 
         i = 0
         while (i < 100):
@@ -105,16 +106,16 @@ class DATABase_Player:
         else:
             role_name = 'Overall KD| ' + str(kd_title_role) + '-' + str(float(kd_title_role) + 0.5)
 
-        role = get_role_by_name(guild=self.discord_guild, name_of_role=role_name)
+        role = get_role_by_name(ctx=None, guild=self.discord_guild, name_of_role=role_name)
         if role is None:
-            New_role_as_create = await self.discord_member.guild.create_role(name=role_name)
-            await self.discord_member.add_roles(New_role_as_create)
+            New_role_as_create = await discord_member.guild.create_role(name=role_name)
+            await discord_member.add_roles(New_role_as_create)
         else:
-            await self.discord_member.add_roles(role)
+            await discord_member.add_roles(role)
 
         i = 0
         while (i < 100):
-            if i <= self.last_stats().kdweekly < i + 0.5:
+            if i <= self.last_stats().weekly_kd < i + 0.5:
                 kd_weekly_title_role = i
                 break
             i = i + 0.5
@@ -123,16 +124,17 @@ class DATABase_Player:
         else:
             role_name = 'Weekly KD| ' + str(kd_weekly_title_role) + '-' + str(float(kd_weekly_title_role) + 0.5)
 
-        role = get_role_by_name(guild=self.discord_guild, name_of_role=role_name)
+        role = get_role_by_name(ctx=None, guild=self.discord_guild, name_of_role=role_name)
         if role is None:
             New_role_as_create = await self.guild.create_role(name=role_name)
-            await self.discord_member.add_roles(New_role_as_create)
+            await discord_member.add_roles(New_role_as_create)
         else:
-            await self.discord_member.add_roles(role)
+            await discord_member.add_roles(role)
 
     @property
     def stats(self) -> Tuple[PlayerStats]:
-        return tuple(self._player_stats)
+        return self._player_stats
+
 
     def last_stats(self):
         return self.stats[-1]
@@ -155,17 +157,17 @@ class DATABase_Player:
                 await game.normal_game_message_form(i)
             elif game is str:
                 await raise_error(
-                    self.discord_member,
+                    self.discord_member(),
                     'your game number: '+ str(i) + 'wasnt normal so i skip it',
                     get_channel_by_name(LAST_MATCH_CHANNEL)
                 )
 
     def check_if_to_pull_again_stats(self):
         time_now = datetime.datetime.now()
-        if time_now.day == self.last_stats.timestamp.day:
-            if (time_now.hour - self.last_stats.timestamp.hour) > 1:
+        if time_now.day == self.last_stats().timestamp.day:
+            if (time_now.hour - self.last_stats().timestamp.hour) > 1:
                 return True
-            elif (time_now.minute - self.last_stats.timestamp.minute) > Minutes_to_pull_data_again:
+            elif (time_now.minute - self.last_stats().timestamp.minute) > Minutes_to_pull_data_again:
                 return True
             else:
                 return False
@@ -192,13 +194,13 @@ class DATABase_Player:
     def _calculate_deltas_kd(self, stats: PlayerStats):
         if len(self.stats) > 1:
             if self.last_stats().timestamp.day == stats.timestamp.day:
-                delta_kd = stats.kd - self.get_stats_by_index(-2).kd
-                delta_weekly_kd = stats.weekly_kd - self.get_stats_by_index(-2).weekly_kd
+                delta_kd = stats.kd - self.stats[-2].kd
+                delta_weekly_kd = stats.weekly_kd - self.stats[-2].weekly_kd
             else:
-                delta_kd = stats.kd - self.get_stats_by_index(-3).kd
-                delta_weekly_kd = stats.weekly_kd - self.get_stats_by_index(-3).weekly_kd
-            delta_last_kd = stats.kd - self.get_stats_by_index(-1).kd
-            delta_last_weekly_kd = stats.weekly_kd - self.get_stats_by_index(-1).weekly_kd
+                delta_kd = stats.kd - self.stats[-3].kd
+                delta_weekly_kd = stats.weekly_kd - self.stats[-3].weekly_kd
+            delta_last_kd = stats.kd - self.stats[-1].kd
+            delta_last_weekly_kd = stats.weekly_kd - self.stats[-1].weekly_kd
         else:
             delta_kd = 0
             delta_weekly_kd = 0

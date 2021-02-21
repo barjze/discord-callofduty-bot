@@ -265,10 +265,10 @@ async def stats_command(ctx: Context, userto: str ='me'):
         if player_member.check_if_to_pull_again_stats:
             member_player_stats = await player_member.pull_new_stats()
             player_member.add_stats(member_player_stats)
-            await player_member.last_stats.stats_massage_form(member, "stats")
+            await player_member.last_stats().stats_massage_form(member, "stats")
             await player_member.give_KD_roles()
         else:
-            await player_member.last_stats.stats_massage_form(member, "stats")
+            await player_member.last_stats().stats_massage_form(member, "stats")
     else:
         await raise_error(member,
                           "you are not in the database yet please signup first",
@@ -281,15 +281,15 @@ async def stats_command2(ctx: Context, userto: str ='me'):
 @bot_client.command(name='lfg')
 async def lfg_command(ctx: Context):
     member = ctx.message.author
-    voice_channel = member.voice.channel
     LFG = get_channel_by_name(LFG_CHANNEL)
     player_member = find_player_by_discord_id(member)
     if player_member is not None:
         if player_member.check_if_to_pull_again_stats:
             member_player_stats = await player_member.pull_new_stats()
             player_member.add_stats(member_player_stats)
-        await player_member.last_stats.stats_massage_form(member, "lfg")
-        if voice_channel is not None:
+        await player_member.last_stats().stats_massage_form(member, "lfg")
+        if member.voice is not None:
+            voice_channel = member.voice.channel
             invite = await voice_channel.create_invite()
             await LFG.send(invite)
     else:
