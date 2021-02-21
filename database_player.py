@@ -12,7 +12,7 @@ from game import game_mod_normal
 
 class DATABase_Player:
 
-    def __init__(self, discord_guild: discord.Guild, discord_id: int, game_id: str, platform: callofduty.Platform, player_stats_list, name_in_game: str):
+    def __init__(self, discord_guild: discord.Guild, discord_id: int, game_id: str, platform: callofduty.Platform, player_stats_list: List[dict], name_in_game: str):
         self._discord_guild = discord_guild
         self._discord_id = discord_id
         self._game_id = game_id
@@ -20,7 +20,11 @@ class DATABase_Player:
         self._cod_player = None
         self._discord_member = None
         self._platform = platform
-        self._player_stats: List[player_stats.PlayerStats] = player_stats_list
+        self._player_stats: List[PlayerStats] = [
+            make_player_stats_from_JSON_DATA(json_data)
+            for json_data
+            in player_stats_list
+        ]
 
     @property
     def discord_guild(self) -> discord.Guild:
@@ -128,13 +132,10 @@ class DATABase_Player:
 
     @property
     def stats(self) -> Tuple[PlayerStats]:
-        return self._player_stats
+        return tuple(self._player_stats)
 
     def last_stats(self):
-        return self.get_stats_by_index(-1)
-
-    def get_stats_by_index(self, index: int):
-        return make_player_stats_from_JSON_DATA(self._player_stats[index])
+        return self.stats[-1]
 
     def change_name_in_game(self, name_in_game):
         self._name_in_game = name_in_game
@@ -179,10 +180,10 @@ class DATABase_Player:
     def add_stats(self, stats: PlayerStats) -> None:
         if self.last_stats().timestamp.day == stats.timestamp.day:
             stats.set_deltas_kds(*self._calculate_deltas_kd(stats))
-            self._player_stats[-1] = stats
+            self.stats[-1] = stats
             self._change_player_stats_in_database()
             return
-        if len(self._player_stats) >= 10:
+        if len(self.stats) >= 10:
             stats.set_deltas_kds(*self._calculate_deltas_kd(stats))
             self._player_stats.pop(0)
         self._player_stats.append(stats)
@@ -218,7 +219,15 @@ class DATABase_Player:
 
     def _change_player_stats_in_database(self):
         myquery = {"discord-id": self.discord_id}
-        newvalues = {"$set": {"info": self._player_stats}}
+        newvalues = {
+            "$set": {
+                "info": [
+                    stat.export_for_db()
+                    for stat
+                    in self._player_stats
+                ]
+            }
+        }
         players.update_one(myquery, newvalues)
 
     def _change_name_in_game_in_database(self):

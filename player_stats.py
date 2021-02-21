@@ -10,6 +10,7 @@ LFG_CHANNEL = "bot-lfg"
 STATS_CHANNEL = "bot-stats"
 STATS_THUMBNAIL_URL = 'https://i.ibb.co/QJVMZwD/Whats-App-Image-2020-11-16-at-13-24-22.jpg'
 
+
 @dataclasses.dataclass
 class PlayerStats:
     timestamp: datetime.datetime
@@ -23,6 +24,11 @@ class PlayerStats:
     delta_last_kd: float = 0.0
     delta_weekly_kd: float = 0.0
     delta_last_weekly_kd: float = 0.0
+
+    def export_for_db(self):
+        return {
+
+        }
 
     def set_deltas_kds(self, delta_kd, delta_weekly_kd, delta_last_kd, delta_last_weekly_kd):
         self.delta_kd = delta_kd
@@ -86,7 +92,7 @@ def get_stat_for_profile(profile: dict, game_mode: ModeType, game_property: Prop
         return 0.0
 
 
-def make_player_stats_from_JSON_DATA(profile: dict):
+def make_player_stats_from_JSON_DATA(profile: dict) -> PlayerStats:
 
     kd = get_stat_for_profile(profile, ModeType.BattleRoyal, Property.KDRatio, is_weekly=False, t=float)
     wins = get_stat_for_profile(profile, ModeType.BattleRoyal, Property.Wins)
