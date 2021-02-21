@@ -1,5 +1,8 @@
 import dataclasses
 import datetime
+import enum
+from typing import Type
+
 import discord
 from avoid_loop_import import get_channel_by_name
 
@@ -59,30 +62,53 @@ class PlayerStats:
         await Channel.send(embed=botfrom)
 
 
-def make_player_stats_from_JSON_DATA(profile: dict):
-    #Game_id = str(profile["username"])
-    kd = float(profile["lifetime"]["mode"]["br"]["properties"]["kdRatio"])
-    wins = float(profile["lifetime"]["mode"]["br"]["properties"]["wins"])
-    kills = float(profile["lifetime"]["mode"]["br"]["properties"]["kills"])
-    games_played = float(profile["lifetime"]["mode"]["br"]["properties"]["gamesPlayed"])
-    kills_weekly_br_solo = float(profile["weekly"]["mode"]["br_brsolo"]["properties"]["kills"])
-    kills_weekly_br_duo = float(profile["weekly"]["mode"]["br_brduos"]["properties"]["kills"])
-    kills_weekly_br_trio = float(profile["weekly"]["mode"]["br_brtrios"]["properties"]["kills"])
-    kills_weekly_br_quad = float(profile["weekly"]["mode"]["br_brquads"]["properties"]["kills"])
-    deaths_weekly_br_solo = float(profile["weekly"]["mode"]["br_brsolo"]["properties"]["deaths"])
-    deaths_weekly_br_duo = float(profile["weekly"]["mode"]["br_brduos"]["properties"]["deaths"])
-    deaths_weekly_br_trio = float(profile["weekly"]["mode"]["br_brtrios"]["properties"]["deaths"])
-    deaths_weekly_br_quad = float(profile["weekly"]["mode"]["br_brquads"]["properties"]["deaths"])
-    try:
-        mona = kills_weekly_br_solo + kills_weekly_br_duo + kills_weekly_br_trio + kills_weekly_br_quad
-        mhane = deaths_weekly_br_solo + deaths_weekly_br_duo + deaths_weekly_br_trio + deaths_weekly_br_quad
-        kdweekly = mona/mhane
-    except:
-        if mona > 0 and mhane == 0:
-            kdweekly = mona
-        elif mhane == 0:
-            kdweekly = 0
+class ModeType(enum.Enum):
+    BattleRoyal = 'br'
+    BattleRoyalSolo = 'br_brsolo'
+    BattleRoyalDuos = 'br_brduos'
+    BattleRoyalTrios = 'br_brtrios'
+    BattleRoyalQuads = 'br_brquads'
 
+
+class Property(enum.Enum):
+    KDRatio = 'kdRatio'
+    Wins = 'wins'
+    Kills = 'kills'
+    Deaths = 'deaths'
+    GamesPlayed = 'gamesPlayed'
+
+
+def get_stat_for_profile(profile: dict, game_mode: ModeType, game_property: Property, *, is_weekly=False, t: Type = int):
+    for_time = 'lifetime' if not is_weekly else 'weekly'
+    try:
+        return t(profile[for_time]['mode'][game_mode.value]['properties'][game_property.value])
+    except KeyError:
+        return 0.0
+
+
+def make_player_stats_from_JSON_DATA(profile: dict):
+
+    kd = get_stat_for_profile(profile, ModeType.BattleRoyal, Property.KDRatio, is_weekly=False, t=float)
+    wins = get_stat_for_profile(profile, ModeType.BattleRoyal, Property.Wins)
+    kills = get_stat_for_profile(profile, ModeType.BattleRoyal, Property.Kills)
+    games_played = get_stat_for_profile(profile, ModeType.BattleRoyal, Property.GamesPlayed)
+
+    all_weekly_kills = sum(
+        get_stat_for_profile(profile, mode, Property.Kills, is_weekly=True)
+        for mode
+        in ModeType
+    )
+
+    all_weekly_deaths = sum(
+        get_stat_for_profile(profile, mode, Property.Deaths, is_weekly=True)
+        for mode
+        in ModeType
+    )
+
+    if all_weekly_deaths == 0:
+        kdweekly = all_weekly_kills
+    else:
+        kdweekly = float(all_weekly_kills) / all_weekly_deaths
 
     kd = round(kd, 2)
     kdweekly = round(kdweekly, 2)

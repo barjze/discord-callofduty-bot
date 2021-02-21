@@ -1,6 +1,6 @@
-import functools
 import itertools
 from typing import Union, List
+
 import callofduty
 import callofduty.http
 import callofduty.utils
@@ -74,7 +74,7 @@ async def DorLogin(email: str, password: str) -> DorClient:
 
 
 def _get_connection_credentials():
-    for credentials in CREDENTIAL_LIST:
+    for credentials in itertools.cycle(CREDENTIAL_LIST):
         yield credentials.split(':')
 
 
@@ -90,7 +90,6 @@ class WithRetry:
     async def __call__(self, *args, **kwargs):
         gen = _get_connection_credentials()
         for _ in range(self._number_of_retries):
-
             email, password = next(gen)
             try:
                 client = await DorLogin(email, password)
