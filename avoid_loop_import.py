@@ -25,8 +25,15 @@ platform_matcher = {
             'Activision': Platform.Activision,
             'Xbox': Platform.Xbox,
             'BattleNet': Platform.BattleNet,
-            'PlayStation': Platform.PlayStation,
+            'PlayStation': Platform.PlayStation
         }
+
+platform_reverse_matcher = {
+    Platform.Activision:'Activision',
+    Platform.Xbox:'Xbox',
+    Platform.BattleNet:'BattleNet',
+    Platform.PlayStation:'PlayStation'
+}
 
 
 def initialize_bot() -> discord.ext.commands.Bot:

@@ -45,11 +45,12 @@ class NormalGame():
         return self._team_belong
 
     async def normal_game_message_form(self, number_game: str = "1"):
+        discord_member = await self._belong.discord_member()
         Channel = get_channel_by_name(LAST_MATCH_CHANNEL)
-        normal_game_message_form = discord.Embed(title="in " + self._belong.discord_member.display_name + "game number: " + number_game, description="", color=0x00ff00)
+        normal_game_message_form = discord.Embed(title="in " + discord_member.display_name + "game number: " + number_game, description="", color=0x00ff00)
         for i in self.players:
-            normal_game_message_form.add_field(name="player: " + self.players[i] + "did: ", value=str(self.players[i]['kills']) + "kills", inline=False)
-        normal_game_message_form.add_field(name="your team finish at: ", value=str(self.team_belong['rankTeam']) + 'place', inline=False)
-        normal_game_message_form.add_field(name="your team had total of: ", value=str(self.team_belong['killsTeam']) + "kills", inline=False)
+            normal_game_message_form.add_field(name="player: " + str(i) + " did: ", value=str(self.players[i]['kills']) + " kills", inline=False)
+        normal_game_message_form.add_field(name="your team finish at: ", value=str(self.team_belong['rankTeam']) + ' place', inline=False)
+        normal_game_message_form.add_field(name="your team had total of: ", value=str(self.team_belong['killsTeam']) + " kills", inline=False)
         normal_game_message_form.set_thumbnail(url=Bot_Embed_Massage_THUMBNAIL_URL)
         await Channel.send(embed=normal_game_message_form)

@@ -26,7 +26,7 @@ class DorHTTP(callofduty.http.HTTP):
         return await self.Send(
             callofduty.http.Request(
                 "GET",
-                f"api/papi-client/crm/cod/v2/title/{title}/platform/{platform}/fullMatch/{mode}/{matchId}/en",
+                f"api/papi-client/crm/cod/v2/title/{title}/platform/{platform}/fullMatch/{mode}/{match_id}/en",
             )
         )
 
@@ -37,7 +37,7 @@ class DorMatch(callofduty.match.Match):
         super().__init__(client, kwargs)
 
     async def details(self) -> dict:
-        return await self._client.GetFullMatch(self.title, self.platform, self.id, )
+        return await self._client.GetFullMatch(self.title, self.platform, self.id)
 
 
 class DorClient(callofduty.Client):
@@ -49,7 +49,7 @@ class DorClient(callofduty.Client):
         callofduty.utils.VerifyPlatform(platform)
 
         return (
-            await self.http.GetFullMatch(title.value, platform.value, Mode.Warzone.value, )
+            await self.http.GetFullMatch(title.value, platform.value, Mode.Warzone.value, match_id)
         )["data"]
 
     async def GetPlayerMatches(
@@ -79,7 +79,7 @@ class credentials:
         self.index = 0
 
     def next_use(self):
-        self.index = self.index + 1 % len(self.credential_list)
+        self.index = (self.index + 1) % len(self.credential_list)
         self.use = self.credential_list[self.index].split(':')
         return self.use
 

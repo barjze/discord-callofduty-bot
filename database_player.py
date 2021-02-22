@@ -1,5 +1,5 @@
 from typing import Tuple, List
-from avoid_loop_import import players, platform_matcher, Minutes_to_pull_data_again, get_role_by_name, raise_error, get_channel_by_name, LAST_MATCH_CHANNEL
+from avoid_loop_import import players, platform_matcher, Minutes_to_pull_data_again, get_role_by_name, raise_error, get_channel_by_name, LAST_MATCH_CHANNEL,platform_reverse_matcher
 from callofduty import Title, Mode
 from player_stats import PlayerStats, make_player_stats_from_JSON_DATA, make_player_stats_from_info_database
 from normal_game import NormalGame
@@ -38,9 +38,10 @@ class DATABase_Player:
     def platform(self) -> callofduty.Platform:
         return self._platform
 
-    @property
-    def discord_name(self) -> str:
-        return self.discord_member.display_name
+
+    async def discord_name(self) -> str:
+        discord_member = await self.discord_member()
+        return discord_member.display_name
 
     @property
     def game_id(self) -> str:
@@ -150,12 +151,12 @@ class DATABase_Player:
         self._change_Platform_in_database()
 
     async def last_matches(self, Number_of_maches):
-        results = await call_of_duty_handler.CodClient().GetPlayerMatches(platform_matcher[self.platform], self.game_id,Title.ModernWarfare, Mode.Warzone, limit=Number_of_maches)
-        for i in len(results) - 1:
+        results = await call_of_duty_handler.CodClient().GetPlayerMatches(self.platform, self.game_id,Title.ModernWarfare, Mode.Warzone, limit=Number_of_maches)
+        for i in range(len(results) - 1):
             game = await make_games_from_JSON_DATA(results[i], self)
-            if game is NormalGame:
-                await game.normal_game_message_form(i)
-            elif game is str:
+            if isinstance(game, NormalGame):
+                await game.normal_game_message_form(str(i))
+            elif isinstance(game, str):
                 await raise_error(
                     self.discord_member(),
                     'your game number: '+ str(i) + 'wasnt normal so i skip it',
@@ -180,6 +181,13 @@ class DATABase_Player:
         return make_player_stats_from_JSON_DATA(new_stats)
 
     def add_stats(self, stats: PlayerStats) -> None:
+        if isinstance(self.last_stats().timestamp,list):
+            if len(self.stats) >= 10:
+                stats.set_deltas_kds(*self._calculate_deltas_kd(stats))
+                self._player_stats.pop(0)
+            self._player_stats.append(stats)
+            self._change_player_stats_in_database()
+            return 
         if self.last_stats().timestamp.day == stats.timestamp.day:
             stats.set_deltas_kds(*self._calculate_deltas_kd(stats))
             self.stats[-1] = stats
@@ -207,12 +215,12 @@ class DATABase_Player:
 
     def _change_game_id_in_database(self):
         myquery = {"discord-id": self.discord_id}
-        newvalues = {"$set": {"Game-id": self.Game_id}}
+        newvalues = {"$set": {"Game-id": self.game_id}}
         players.update_one(myquery, newvalues)
 
     def _change_Platform_in_database(self):
         myquery = {"discord-id": self.discord_id}
-        newvalues = {"$set": {"Platform": self.Platform}}
+        newvalues = {"$set": {"Platform": platform_reverse_matcher[self.platform]}}
         players.update_one(myquery, newvalues)
 
     def _change_player_stats_in_database(self):
@@ -230,7 +238,7 @@ class DATABase_Player:
 
     def _change_name_in_game_in_database(self):
         myquery = {"discord-id": self.discord_id}
-        newvalues = {"$set": {"info": self._name_in_game}}
+        newvalues = {"$set": {"name-in-game": self._name_in_game}}
         players.update_one(myquery, newvalues)
 
 async def make_games_from_JSON_DATA(game, player_member: DATABase_Player):
@@ -252,8 +260,9 @@ async def make_games_from_JSON_DATA(game, player_member: DATABase_Player):
                 kills = a["playerStats"]["kills"]
                 players[a["player"]["username"]] = {'kills': kills}
         game_info['players'] = players
+        killsteam = 0
         for s in game_info['players']:
-            killsteam = killsteam + game_info[s]["kills"]
+            killsteam = killsteam + game_info['players'][s]["kills"]
         game_info['game_id'] = game_id
         game_info['game_mode'] = game_mode
         game_info['time_start'] = time_game_is_start

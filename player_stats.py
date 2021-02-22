@@ -33,13 +33,11 @@ class PlayerStats:
             "gamesPlayed" : self.games_played,
             "kdweekly" : self.weekly_kd,
             "winprecent" : self.win_percentage,
-            "delta_kd" : 0.01,
+            "delta_kd" : self.delta_kd,
             "delta_last_kd": self.delta_last_kd,
             "delta_weekly_kd" : self.delta_weekly_kd,
             "delta_last_weekly_kd" : self.delta_last_weekly_kd,
             "time" : self.timestamp
-
-
         }
 
     def set_deltas_kds(self, delta_kd, delta_weekly_kd, delta_last_kd, delta_last_weekly_kd):
@@ -149,13 +147,13 @@ def make_player_stats_from_JSON_DATA(profile: dict) -> PlayerStats:
 
 def make_player_stats_from_info_database(info: dict):
     try:
-        delta_kd = info["delta_kd"]
-        delta_last_kd = info["delta_last_kd"]
-        delta_weekly_kd = info["delta_weekly_kd"]
-        delta_last_weekly_kd = info["delta_last_weekly_kd"]
+        delta_kd = float(info["delta_kd"])
+        delta_last_kd = float(info["delta_last_kd"])
+        delta_weekly_kd = float(info["delta_weekly_kd"])
+        delta_last_weekly_kd = float(info["delta_last_weekly_kd"])
     except:
-        delta_kd = info["deltakd"]
-        delta_weekly_kd = info["deltakdweekly"]
+        delta_kd = 0
+        delta_weekly_kd = 0
         delta_last_weekly_kd = 0
         delta_last_kd = 0
 
