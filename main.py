@@ -226,8 +226,15 @@ async def re_signup_command(ctx: Context, *, game_id: str = None):
             get_channel_by_name(SIGNUP_CHANNEL_NAME))
 
 @bot_client.command(name='nickname')
-async def nickname_add_command(ctx: Context, name_in_game: str):
+async def nickname_add_command(ctx: Context, name_in_game: str = None):
     member = ctx.author
+    if name_in_game is None:
+        await raise_error(member,
+                          "Please send your name in game after the command\n"
+                          "for exemple: '!nickname GiantPiG",
+                          get_channel_by_name(LAST_MATCH_CHANNEL)
+                          )
+
     player_member = find_player_by_discord_id(member)
     if player_member is not None:
         if player_member.name_in_game == "did'nt_provide_yet":
@@ -327,18 +334,26 @@ async def lfg_command(ctx: Context):
 async def lfg_command_2(ctx: Context):
     await lfg_command(ctx)
 
-@bot_client.command(name='lastmatch')
-async def last_match_command(ctx: Context, Number_of_maches: int = 5):
-    member = ctx.author
+@bot_client.command(name='lm')
+async def last_match_command(ctx: Context, Number_of_maches = 5, member_mention = None):
+    print(Number_of_maches)
+    print(type(Number_of_maches))
+    if isinstance(Number_of_maches,str):
+        member_mention = Number_of_maches
+        Number_of_maches = 5
+    if member_mention is None:
+        member = ctx.author
+    else:
+        member = mention_to_member(ctx, member_mention)
     player_member = find_player_by_discord_id(member)
     if player_member is None:
         await raise_error(member,
-                    "you are not in the database yet please signup first",
+                    f"{member.display_name} is not in the database yet please signup first",
                     get_channel_by_name(LAST_MATCH_CHANNEL))
         return
     if player_member.name_in_game == "did'nt_provide_yet":
         await raise_error(member,
-                          "We need your nickname in the game for be able to do that please use '!nickname' first"
+                          f"We need {member.display_name} nickname in the game for be able to do that please use '!nickname' first"
                           "and then try again",
                           get_channel_by_name(LAST_MATCH_CHANNEL))
         return

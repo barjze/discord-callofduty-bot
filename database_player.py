@@ -151,11 +151,13 @@ class DATABase_Player:
         self._change_Platform_in_database()
 
     async def last_matches(self, Number_of_maches):
-        results = await call_of_duty_handler.CodClient().GetPlayerMatches(self.platform, self.game_id,Title.ModernWarfare, Mode.Warzone, limit=Number_of_maches)
+        print(Number_of_maches)
+        print(type(Number_of_maches))
+        results = await call_of_duty_handler.CodClient().GetPlayerMatches(self.platform, self.game_id, Title.ModernWarfare, Mode.Warzone, limit=Number_of_maches + 1)
         for i in range(len(results) - 1):
             game = await make_games_from_JSON_DATA(results[i], self)
             if isinstance(game, NormalGame):
-                await game.normal_game_message_form(str(i))
+                await game.normal_game_message_form(str(i+1))
             elif isinstance(game, str):
                 await raise_error(
                     self.discord_member(),
@@ -187,7 +189,7 @@ class DATABase_Player:
                 self._player_stats.pop(0)
             self._player_stats.append(stats)
             self._change_player_stats_in_database()
-            return 
+            return
         if self.last_stats().timestamp.day == stats.timestamp.day:
             stats.set_deltas_kds(*self._calculate_deltas_kd(stats))
             self.stats[-1] = stats

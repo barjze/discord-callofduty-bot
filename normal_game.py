@@ -47,7 +47,7 @@ class NormalGame():
     async def normal_game_message_form(self, number_game: str = "1"):
         discord_member = await self._belong.discord_member()
         Channel = get_channel_by_name(LAST_MATCH_CHANNEL)
-        normal_game_message_form = discord.Embed(title="in " + discord_member.display_name + "game number: " + number_game, description="", color=0x00ff00)
+        normal_game_message_form = discord.Embed(title="in " + discord_member.display_name + " game number: " + number_game, description="", color=0x00ff00)
         for i in self.players:
             normal_game_message_form.add_field(name="player: " + str(i) + " did: ", value=str(self.players[i]['kills']) + " kills", inline=False)
         normal_game_message_form.add_field(name="your team finish at: ", value=str(self.team_belong['rankTeam']) + ' place', inline=False)
