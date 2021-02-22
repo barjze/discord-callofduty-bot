@@ -65,7 +65,7 @@ async def raise_error(member: discord.Member, message: str, channel=None):
     )
 
     error_message.add_field(
-        name=f'Hello {member.mention}',
+        name=f'Hello {member.display_name}',
         value=message,
         inline=False
     )

@@ -73,6 +73,9 @@ def find_player_by_discord_id(member: discord.Member):
     person = players.find_one(x)
     if person == None:
         return None
+    if person['Platform'] == "Activision":
+        return "Activision problem"
+
     player_member = DATABase_Player(discord_guild=member.guild,
                                     discord_id=member.id,
                                     game_id=person['Game-id'],
@@ -260,22 +263,35 @@ async def stats_command(ctx: Context, userto: str ='me'):
     else:
         member = mention_to_member(ctx, userto)
     CHANNEL = get_channel_by_name(STATS_CHANNEL)
-    message = await CHANNEL.send("**Fetching stats, you'll get them in no time!**")
+    message = await CHANNEL.send(f"**Fetching {member.display_name} stats, you'll get them in no time!**")
 
     player_member = find_player_by_discord_id(member)
-    if player_member is not None:
+    if type(player_member) is str:
+        await discord.Message.delete(message)
+        await raise_error(member,
+                    "You signedup with Activition and it is not allowed any more. please use '!resignup' to signup again with your battelnet",
+                    get_channel_by_name(STATS_CHANNEL))
+        return
+    elif type(player_member) is DATABase_Player:
         if player_member.check_if_to_pull_again_stats:
-            member_player_stats = await player_member.pull_new_stats()
+            try:
+                member_player_stats = await player_member.pull_new_stats()
+            except:
+                await raise_error(member,
+                            "I do not have premmtion to get the informtion please make your profile as public",
+                            get_channel_by_name(STATS_CHANNEL))
             player_member.add_stats(member_player_stats)
             await player_member.last_stats().stats_massage_form(member, "stats")
             await discord.Message.delete(message)
             await player_member.give_KD_roles()
         else:
             await player_member.last_stats().stats_massage_form(member, "stats")
-    else:
+    elif player_member is None:
+        await discord.Message.delete(message)
         await raise_error(member,
                           "you are not in the database yet please signup first",
                           get_channel_by_name(STATS_CHANNEL))
+
 
 @bot_client.command(name='דאשאד')
 async def stats_command2(ctx: Context, userto: str ='me'):

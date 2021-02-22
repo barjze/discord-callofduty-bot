@@ -72,10 +72,24 @@ async def DorLogin(email: str, password: str) -> DorClient:
     await auth.SubmitLogin()
     return DorClient(DorHTTP(auth))
 
+class credentials:
+    def __init__(self, credential_list: list):
+        self.credential_list = credential_list
+        self.use = credential_list[0].split(':')
+        self.index = 0
 
-def _get_connection_credentials():
-    for credentials in itertools.cycle(CREDENTIAL_LIST):
-        yield credentials.split(':')
+    def next_use(self):
+        self.index = self.index + 1 % len(self.credential_list)
+        self.use = self.credential_list[self.index].split(':')
+        return self.use
+
+
+gen = credentials(CREDENTIAL_LIST)
+
+
+# def _get_connection_credentials():
+#     for credentials in itertools.cycle(CREDENTIAL_LIST):
+#         yield credentials.split(':')
 
 
 class WithRetry:
@@ -88,16 +102,19 @@ class WithRetry:
         self._func = func
 
     async def __call__(self, *args, **kwargs):
-        gen = _get_connection_credentials()
         for _ in range(self._number_of_retries):
-            email, password = next(gen)
+            email, password = gen.use
+            gen.next_use()
             try:
                 client = await DorLogin(email, password)
                 return_value = await self._func(client, *args, **kwargs)
+                await ErorrChannel.send(
+                    f'**This email_client is work {email}**, for method **{self._func.__name__}**'
+                )
             except Exception:
                 ErorrChannel = get_channel_by_name(ERROR_CHANNEL)
                 await ErorrChannel.send(
-                    f'I tried to use user {email}, for method {self._func.__name__} and the request failed!'
+                    f'I tried to use user **{email}**, for method **{self._func.__name__}** and the request failed!'
                 )
                 continue
             return return_value

@@ -145,3 +145,30 @@ def make_player_stats_from_JSON_DATA(profile: dict) -> PlayerStats:
         weekly_kd=kdweekly,
         win_percentage=winprecent,
     )
+
+
+def make_player_stats_from_info_database(info: dict):
+    try:
+        delta_kd = info["delta_kd"]
+        delta_last_kd = info["delta_last_kd"]
+        delta_weekly_kd = info["delta_weekly_kd"]
+        delta_last_weekly_kd = info["delta_last_weekly_kd"]
+    except:
+        delta_kd = info["deltakd"]
+        delta_weekly_kd = info["deltakdweekly"]
+        delta_last_weekly_kd = 0
+        delta_last_kd = 0
+
+    return PlayerStats(
+    timestamp = info["time"],
+    kd = info["kd"],
+    wins = info["wins"],
+    kills = info["kills"],
+    games_played =info["gamesPlayed"],
+    weekly_kd = info["kdweekly"],
+    win_percentage = info["winprecent"],
+    delta_kd = delta_kd,
+    delta_last_kd = delta_last_kd,
+    delta_weekly_kd = delta_weekly_kd,
+    delta_last_weekly_kd = delta_last_weekly_kd,
+    )

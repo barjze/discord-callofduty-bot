@@ -1,7 +1,7 @@
 from typing import Tuple, List
 from avoid_loop_import import players, platform_matcher, Minutes_to_pull_data_again, get_role_by_name, raise_error, get_channel_by_name, LAST_MATCH_CHANNEL
 from callofduty import Title, Mode
-from player_stats import PlayerStats, make_player_stats_from_JSON_DATA
+from player_stats import PlayerStats, make_player_stats_from_JSON_DATA, make_player_stats_from_info_database
 from normal_game import NormalGame
 import callofduty
 import discord
@@ -21,7 +21,7 @@ class DATABase_Player:
         self._discord_member = None
         self._platform = platform
         self._player_stats: List[PlayerStats] = [
-            make_player_stats_from_JSON_DATA(json_data)
+            make_player_stats_from_info_database(json_data)
             for json_data
             in player_stats_list
         ]
