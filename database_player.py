@@ -207,6 +207,10 @@ class DATABase_Player:
             delta_weekly_kd = stats.weekly_kd - self.stats[-2].weekly_kd
             delta_last_kd = stats.kd - self.stats[-1].kd
             delta_last_weekly_kd = stats.weekly_kd - self.stats[-1].weekly_kd
+            delta_kd = round(delta_kd, 2)
+            delta_weekly_kd = round(delta_weekly_kd, 2)
+            delta_last_kd = round(delta_last_kd, 2)
+            delta_last_weekly_kd = round(delta_last_weekly_kd, 2)
         else:
             delta_kd = 0
             delta_weekly_kd = 0
