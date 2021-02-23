@@ -59,6 +59,7 @@ def find_player_by_Game_id(Gameid, member: discord.Member):
         return None
     player_member = DATABase_Player(discord_guild=member.guild,
                                     discord_id=member.id,
+                                    discord_member=member,
                                     game_id=person['Game-id'],
                                     platform=platform_matcher[person['Platform']],
                                     player_stats_list=person['info'],
@@ -73,16 +74,18 @@ def find_player_by_discord_id(member: discord.Member, reSignup = False):
     if person['Platform'] == "Activision":
         if reSignup:
             player_member = DATABase_Player(discord_guild=member.guild,
-                                    discord_id=member.id,
-                                    game_id=person['Game-id'],
-                                    platform=platform_matcher[person['Platform']],
-                                    player_stats_list=person['info'],
-                                    name_in_game=person['name-in-game'])
+                                            discord_id=member.id,
+                                            discord_member=member,
+                                            game_id=person['Game-id'],
+                                            platform=platform_matcher[person['Platform']],
+                                            player_stats_list=person['info'],
+                                            name_in_game=person['name-in-game'])
             return player_member
         return "Activision problem"
 
     player_member = DATABase_Player(discord_guild=member.guild,
                                     discord_id=member.id,
+                                    discord_member=member,
                                     game_id=person['Game-id'],
                                     platform=platform_matcher[person['Platform']],
                                     player_stats_list=person['info'],
@@ -104,6 +107,7 @@ def add_player_to_data_base(member: discord.Member, player_stats: PlayerStats, P
     return DATABase_Player(
         discord_guild=member.guild,
         discord_id=member.id,
+        discord_member=member,
         game_id=Game_id,
         name_in_game="did'nt_provide_yet",
         platform=Platform,
@@ -256,6 +260,12 @@ async def nickname_add_command(ctx: Context, name_in_game: str = None):
 @bot_client.command(name='change_nickname')
 async def change_nickname_command(ctx: Context, name_in_game: str):
     member = ctx.author
+    if name_in_game is None:
+        await raise_error(member,
+                          "Please send your name in game after the command\n"
+                          "for exemple: '!change_nickname GiantPiG",
+                          get_channel_by_name(LAST_MATCH_CHANNEL)
+                          )
     player_member = find_player_by_discord_id(member.id)
     if player_member is not None:
         player_member.change_name_in_game(name_in_game)

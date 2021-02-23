@@ -12,13 +12,13 @@ from game import game_mod_normal
 
 class DATABase_Player:
 
-    def __init__(self, discord_guild: discord.Guild, discord_id: int, game_id: str, platform: callofduty.Platform, player_stats_list: List[dict], name_in_game: str):
+    def __init__(self, discord_guild: discord.Guild, discord_id: int, game_id: str, platform: callofduty.Platform, player_stats_list: List[dict], name_in_game: str, discord_member = None):
         self._discord_guild = discord_guild
         self._discord_id = discord_id
         self._game_id = game_id
         self._name_in_game = name_in_game
         self._cod_player = None
-        self._discord_member = None
+        self._discord_member = discord_member
         self._platform = platform
         self._player_stats: List[PlayerStats] = [
             make_player_stats_from_info_database(json_data)
@@ -282,3 +282,6 @@ async def make_games_from_JSON_DATA(game, player_member: DATABase_Player):
         time_game_is_end = game_data["allPlayers"][0]["utcEndSeconds"]
         game_mode = game_data["allPlayers"][0]["mode"]
         return game_mode
+    else:
+        f = open("myfile.txt", "w")
+        f.write(str(game_data) + "\n")
