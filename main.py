@@ -345,12 +345,10 @@ async def lfg_command_2(ctx: Context):
     await lfg_command(ctx)
 
 @bot_client.command(name='lm')
-async def last_match_command(ctx: Context, Number_of_maches = 5, member_mention = None):
-    print(Number_of_maches)
-    print(type(Number_of_maches))
+async def last_match_command(ctx: Context, Number_of_maches, member_mention = None):
     if isinstance(Number_of_maches,str):
         member_mention = Number_of_maches
-        Number_of_maches = 5
+        Number_of_maches = 3
     if member_mention is None:
         member = ctx.author
     else:

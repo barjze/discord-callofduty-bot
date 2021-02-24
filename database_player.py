@@ -160,7 +160,7 @@ class DATABase_Player:
                 await game.normal_game_message_form(str(i+1))
             elif isinstance(game, str):
                 await raise_error(
-                    self.discord_member(),
+                    await self.discord_member(),
                     'your game number: '+ str(i) + 'wasnt normal so i skip it',
                     get_channel_by_name(LAST_MATCH_CHANNEL)
                 )
