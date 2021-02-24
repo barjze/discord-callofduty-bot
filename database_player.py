@@ -150,14 +150,17 @@ class DATABase_Player:
         self._change_game_id_in_database()
         self._change_Platform_in_database()
 
-    async def last_matches(self, Number_of_maches):
-        print(Number_of_maches)
-        print(type(Number_of_maches))
+    async def last_matches(self, Number_of_maches, massage_to_delete: discord.Message, option_member_to_send):
         results = await call_of_duty_handler.CodClient().GetPlayerMatches(self.platform, self.game_id, Title.ModernWarfare, Mode.Warzone, limit=Number_of_maches + 1)
+        await discord.Message.delete(massage_to_delete)
         for i in range(len(results) - 1):
+            if Number_of_maches > 3:
+                is_it_more_then_3 = True
+            else:
+                is_it_more_then_3 = False
             game = await make_games_from_JSON_DATA(results[i], self)
             if isinstance(game, NormalGame):
-                await game.normal_game_message_form(str(i+1))
+                await game.normal_game_message_form(str(i+1), is_it_more_then_3, option_member_to_send)
             elif isinstance(game, str):
                 await raise_error(
                     await self.discord_member(),

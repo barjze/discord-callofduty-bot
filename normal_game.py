@@ -44,9 +44,12 @@ class NormalGame():
     def team_belong(self) -> str:
         return self._team_belong
 
-    async def normal_game_message_form(self, number_game: str = "1"):
+    async def normal_game_message_form(self, number_game: str = "1", is_it_more_then_3 = False, option_member_to_send = None):
         discord_member = await self._belong.discord_member()
-        Channel = get_channel_by_name(LAST_MATCH_CHANNEL)
+        if is_it_more_then_3:
+            Channel = option_member_to_send
+        else:
+            Channel = get_channel_by_name(LAST_MATCH_CHANNEL)
         normal_game_message_form = discord.Embed(title="in " + discord_member.display_name + " game number: " + number_game, description="", color=0x00ff00)
         for i in self.players:
             normal_game_message_form.add_field(name="player: " + str(i) + " did: ", value=str(self.players[i]['kills']) + " kills", inline=False)

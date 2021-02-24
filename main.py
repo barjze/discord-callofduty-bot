@@ -345,14 +345,20 @@ async def lfg_command_2(ctx: Context):
     await lfg_command(ctx)
 
 @bot_client.command(name='lm')
-async def last_match_command(ctx: Context, Number_of_maches, member_mention = None):
-    if isinstance(Number_of_maches,str):
-        member_mention = Number_of_maches
-        Number_of_maches = 3
+async def last_match_command(ctx: Context, Number_of_maches = None, member_mention = None):
+    if isinstance(Number_of_maches, str):
+        try:
+            Number_of_maches = int(Number_of_maches)
+        except:
+            member_mention = Number_of_maches
+            Number_of_maches = 3
     if member_mention is None:
         member = ctx.author
     else:
         member = mention_to_member(ctx, member_mention)
+    if Number_of_maches is None:
+        Number_of_maches = 3
+
     player_member = find_player_by_discord_id(member)
     if player_member is None:
         await raise_error(member,
@@ -365,7 +371,9 @@ async def last_match_command(ctx: Context, Number_of_maches, member_mention = No
                           "and then try again",
                           get_channel_by_name(LAST_MATCH_CHANNEL))
         return
-    await player_member.last_matches(Number_of_maches)
+    channel = get_channel_by_name(LAST_MATCH_CHANNEL)
+    massage = await channel.send("**Feching your game please wait...**")
+    await player_member.last_matches(Number_of_maches, massage, ctx.author)
 
 if __name__ == '__main__':
     bot_client.run(read_token())
